@@ -1,6 +1,6 @@
 
 using Statistics, SAFD, CSV, DataFrames, LoopVectorization, StatsPlots, Distributions
-using MS_Import, LinearAlgebra
+using MS_Import, LinearAlgebra, CompCreate, JLD2
 
 function mass_align(Rt::Vector{Float32}, Mz_values::Matrix{Float32}, Mz_intensity::Matrix{Float32})
     # Round the MS-values to the nearest integer
@@ -250,5 +250,96 @@ function calculate_percentage_coverage(intensities::Matrix{Float32}, threshold::
 
     return coverage_percentage
 end
+function mat_split(M::Matrix{Float32}, max_mz::Int64, Gradient_end::Float64)
+    #Trimming for max_mz and end_gradient
+    matrix_grad = M[1:(findfirst(x->Gradient_end<x, Rt)),:]
+    matrix_mz = matrix_grad[:,1:(findfirst(x->x>max_mz, unique_mz_values))]
+
+    M_final = matrix_mz'
+    m,n = size(M_final)
+
+    sub_matrix_row = Int(trunc(m/3))    
+    sub_matrix_col = Int(trunc(n/3))
+
+    A1 = M_final[1:min(sub_matrix_row, m), 1:min(sub_matrix_col, n)]
+    A2 = M_final[(sub_matrix_row+1):min(2*sub_matrix_row, m), 1:min(sub_matrix_col, n)]
+    A3 = M_final[(2*sub_matrix_row+1):min(3*sub_matrix_row, m), 1:min(sub_matrix_col, n)]
+
+    B1 = M_final[1:min(sub_matrix_row, m), (sub_matrix_col+1):min(2*sub_matrix_col, n)]
+    B2 = M_final[(sub_matrix_row+1):min(2*sub_matrix_row, m), (sub_matrix_col+1):min(2*sub_matrix_col, n)]
+    B3 = M_final[(2*sub_matrix_row+1):min(3*sub_matrix_row, m), (sub_matrix_col+1):min(2*sub_matrix_col, n)]
+
+    C1 = M_final[1:min(sub_matrix_row, m), (2*sub_matrix_col+1):min(3*sub_matrix_col, n)]
+    C2 = M_final[(sub_matrix_row+1):min(2*sub_matrix_row, m), (2*sub_matrix_col+1):min(3*sub_matrix_col, n)]
+    C3 = M_final[(2*sub_matrix_row+1):min(3*sub_matrix_row, m), (2*sub_matrix_col+1):min(3*sub_matrix_col, n)]
 
 
+    #For plotting
+
+    h_line_1 = ones(n).* unique_mz_values[sub_matrix_row*1]
+    h_line_2 = ones(n).* unique_mz_values[sub_matrix_row*2]
+    v_line_1 = ones(m).* Rt[sub_matrix_col*1]
+    v_line_2 = ones(m).* Rt[sub_matrix_col*2]
+
+    heatmap(Rt[1:length(matrix_grad[:,1])], unique_mz_values[1:length(matrix_mz[1,:])], matrix_mz',
+        color=:plasma,
+        clims=(25000, 80000),
+        legend = false,
+        size=(1280, 720),
+        xlabel="Rt",
+        ylabel="m/z",
+        title="Heat map of pest mix",
+        left_margin=5Plots.mm, right_margin=7.5Plots.mm,
+        bottom_margin=8.5Plots.mm)
+
+
+    plot!(Rt[1:length(matrix_grad[:,1])], h_line_1, c =:red, linestyle = :dash)
+    plot!(Rt[1:length(matrix_grad[:,1])], h_line_2, c =:red, linestyle = :dash)
+    plot!(v_line_1, unique_mz_values[1:length(matrix_mz[1,:])], c =:red, linestyle = :dash)
+    p_f = plot!(v_line_2, unique_mz_values[1:length(matrix_mz[1,:])], c =:red, linestyle = :dash)
+
+
+   
+    return A1, A2, A3, B1, B2, B3, C1, C2, C3, h_line_1, h_line_2, v_line_1, v_line_2, p_f
+end
+function calc_coverage_grid(A1, A2, A3, B1, B2, B3, C1, C2, C3, threshold)
+
+    A1_cov = calculate_percentage_coverage(A1, threshold)
+    A2_cov = calculate_percentage_coverage(A2, threshold)
+    A3_cov = calculate_percentage_coverage(A3, threshold)
+    B1_cov = calculate_percentage_coverage(B1, threshold)
+    B2_cov = calculate_percentage_coverage(B2, threshold)
+    B3_cov = calculate_percentage_coverage(B3, threshold)
+    C1_cov = calculate_percentage_coverage(C1, threshold)
+    C2_cov = calculate_percentage_coverage(C2, threshold)
+    C3_cov = calculate_percentage_coverage(C3, threshold)
+
+    mean_cov = mean([A1_cov, A2_cov, A3_cov, B1_cov, B2_cov, B3_cov,
+                     C1_cov, C2_cov, C3_cov])
+    std_cov = std([A1_cov, A2_cov, A3_cov, B1_cov, B2_cov, B3_cov,
+                   C1_cov, C2_cov, C3_cov])
+
+    return mean_cov, std_cov
+end
+function mat_split_old(M::Matrix{Float64})
+    m,n = size(M)
+
+    sub_matrix_row = Int(trunc(m/3))
+    sub_matrix_col = Int(trunc(n/3))
+
+    A1 = M_final[1:Int((sub_matrix_row)*1),1:Int((sub_matrix_col)*1)]
+    A2 = M_final[Int((sub_matrix_row)*1):Int((sub_matrix_row)*2), 1:Int((sub_matrix_col)*1)]
+    A3 = M_final[Int((sub_matrix_row)*2):Int((sub_matrix_row)*3), 1:Int((sub_matrix_col)*1)]
+
+    B1 = M_final[1:Int((sub_matrix_row)*1), Int((sub_matrix_col)*1):Int((sub_matrix_col)*2)]
+    B2 = M_final[Int((sub_matrix_row)*1):Int((sub_matrix_row)*2), Int((sub_matrix_col)*1):Int((sub_matrix_col)*2)]
+    B3 = M_final[Int((sub_matrix_row)*2):Int((sub_matrix_row)*3), Int((sub_matrix_col)*1):Int((sub_matrix_col)*2)]
+
+    C1 = M_final[1:Int((sub_matrix_row)*1), Int((sub_matrix_col)*2):Int((sub_matrix_col)*3)]
+    C2 = M_final[Int((sub_matrix_row)*1):Int((sub_matrix_row)*2), Int((sub_matrix_col)*2):Int((sub_matrix_col)*3)]
+    C3 = M_final[Int((sub_matrix_row)*2):Int((sub_matrix_row)*3), Int((sub_matrix_col)*2):Int((sub_matrix_col)*3)]
+
+
+
+    return A1, A2, A3, B1, B2, B3, C1, C2, C3
+end
