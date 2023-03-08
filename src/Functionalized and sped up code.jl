@@ -84,13 +84,14 @@ function resolutions(SAFD_output::DataFrame)
 
     return res_Rt, res_M
 end
+
 function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::Float64)
 
     #Assign peaks to each of the windows
     Peaks_per_window, time_diff = Peaks_p_window(wind_size, Rt, SAFD_output)
     #Make some empty arrays to store data
     #Store results
-    tot_unresolved_final::Matrix{Float32} = zeros(wind_size, 5)
+    tot_unresolved_final::Matrix{Float32} = zeros(wind_size, 6)
     #Assing colors for plotting
     colors = Vector{Int32}(undef, length(SAFD_output[:, 4]))
     #This loop  will go calculate the resolution in Rt and MS for the features in each window
@@ -120,8 +121,8 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
             resolved_MS = vec(sum(result_MS, dims=1)) + vec(sum(result_MS, dims=2))
             resolved_MS_f = resolved_MS .!= size(res_M, 1) -1
             #Both together
-            result_f = (resolved_Rt_f.==1) .& (resolved_MS_f .==1)
-            tot_unresolved_final[i, 3] = sum(result_f)
+            result_f = (resolved_Rt_f) .& (resolved_MS_f)
+            tot_unresolved_final[i, 4] = sum(result_f)
 
             #This code is to assign the colors in the plot
             for k = 1:length(resolved_Rt_f)
@@ -129,11 +130,11 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
                 if resolved_Rt_f[k] && resolved_MS_f[k]
                     colors[peak_index] = 1 #Red cross -> Resolved in neither
                 elseif !resolved_Rt_f[k] && resolved_MS_f[k]
-                    colors[peak_index] = 3 # Yellow cross -> Resolved in RT only
+                    colors[peak_index] = 2 #Orange cross ->Resolved only in Rt
                 elseif !resolved_Rt_f[k] && !resolved_MS_f[k]
-                    colors[peak_index] = 4 #Green cross -> Resolved in both
+                    colors[peak_index] = 3 #Green cross -> Resolved in both
                 else
-                    colors[peak_index] = 2 #Red circle -> Resolved in MS only
+                    colors[peak_index] = 4 #Yellow cross -> Resolved in MS only
                 end
             end
 
@@ -142,16 +143,28 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
     #This is just to calculate percentage unresolved based on 1)within window, 2) compared to all peaks
     for i = 1:wind_size
         if length(Peaks_per_window[i]) > 1
-            tot_unresolved_final[i,4] = (tot_unresolved_final[i,3]/length(Peaks_per_window[i]))*100
+            tot_unresolved_final[i,5] = (tot_unresolved_final[i,4]/length(Peaks_per_window[i]))*100
         end
         if length(Peaks_per_window[i]) > 1
-            tot_unresolved_final[i,5] = (tot_unresolved_final[i,3]/length(SAFD_output[:,4]))*100
+            tot_unresolved_final[i,6] = (tot_unresolved_final[i,4]/length(SAFD_output[:,4]))*100
         end
     end
+    #To calculate the slope of the gradient in a specific window
+    Split = window_split_Rt(Rt,wind_size)
+    tot_unresolved_final[:,3] = Vector{Float64}(zeros((length(Split))-1))
+    # first define pos at the first Split for the gradient 
+    pos = findfirst(x->x>=Split[1], Rt)
+    @time for i = 1:length(Split)-1
+        # save the index of the i + 1 location in temp to not overwrite the pos variable
+        tmp = findfirst(x->x>=Split[i+1], Rt)
+        tot_unresolved_final[i,3] = (B_gradient_final[tmp] - B_gradient_final[pos])/(Split[i+1]-Split[i])
+        # overwrite pos since the index in tmp is equal to the next position that we want to use
+        pos = tmp
+    end
 
-    final_df::DataFrame = DataFrame(Window_Start = tot_unresolved_final[:,1], Window_end = tot_unresolved_final[:,2],
-                         Unresolved_peaks = tot_unresolved_final[:,3], Unresolved_compared_to_window = tot_unresolved_final[:,4],
-                         Unresolved_compared_to_total = tot_unresolved_final[:,5])
+    final_df::DataFrame = DataFrame(Window_Start = tot_unresolved_final[:,1], Window_end = tot_unresolved_final[:,2], Gradient_slope = 
+                        tot_unresolved_final[:,3],Unresolved_peaks = tot_unresolved_final[:,4], Unresolved_compared_to_window = 
+                        tot_unresolved_final[:,5],Unresolved_compared_to_total = tot_unresolved_final[:,6])
 
     #The end result in the amount of peaks that have a Resolution in Rt and in MS lower than 1.5
     return tot_unresolved_final, colors, final_df
@@ -200,7 +213,7 @@ function Peaks_p_window(wind_size::Int64, Rt::Vector{Float32}, SAFD_output::Data
     end
     return Peaks_per_window, time_diff
 end
-function plot_heatmap(SAFD::DataFrame, mz_thresh::Int, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int)
+function plot_heatmap(SAFD::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int)
     split = window_split_Rt(Rt, wind_size)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
@@ -216,9 +229,9 @@ function plot_heatmap(SAFD::DataFrame, mz_thresh::Int, Rt::Vector{Float32}, uniq
     )
     #color=[:red, :red, :yellow, :green]
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
-    paint = [:red, :orange, :yellow, :green]
+    paint = [:Red, :Orange, :Green, :Yellow]
     colors_final::Vector{Symbol} = paint[colors]
-    mapping = Dict(1 => "Unresolved in RT and MS", 2 => "Resolved in MS only", 3 => "Resolved in RT only", 4 => "Fully resolved")
+    mapping = Dict(1 => "Unresolved in both", 2 => "Resolved only in RT", 3 => "Resolved in both MS and RT", 4 => "Resolved in MS only")
     labels_final::Vector{String} = map(x -> mapping[x], colors)
     p2 = scatter!(SAFD[:, 4], SAFD[:, 8],
         #series_annotations = text.(1:length(SAFD_output[:,4]),size = 1),
@@ -234,7 +247,7 @@ function plot_heatmap(SAFD::DataFrame, mz_thresh::Int, Rt::Vector{Float32}, uniq
 
     for i = 1:length(split)
         @show i
-        p2 = plot!(ones(mz_thresh[end]) .* (split[i]), collect(1:1:mz_thresh[end]), color=:red, legend=true, label=false)
+        p2 = plot!(ones(Int64(maximum(unique_mz_values))) .* (split[i]), collect(1:1:Int64(maximum(unique_mz_values))), color=:red, legend=true, label=false)
         display(p2)
     end
 end
@@ -343,3 +356,5 @@ function mat_split_old(M::Matrix{Float64})
 
     return A1, A2, A3, B1, B2, B3, C1, C2, C3
 end
+
+
