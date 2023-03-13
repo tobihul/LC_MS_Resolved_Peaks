@@ -84,8 +84,48 @@ function resolutions(SAFD_output::DataFrame)
 
     return res_Rt, res_M
 end
+function gradient_curve(data::DataFrame, Rt::Vector{Float32})
 
-function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::Float64)
+    data = Matrix(data)
+    b_modifiers = Vector{Vector{Float64}}(undef, (size(data, 1) - 1))
+
+    for i in 1:length(b_modifiers)
+
+        t_start = data[i, 1]
+        t_end = data[i+1, 1]
+        b_start = data[i, 2]
+        b_end = data[i+1, 2]
+
+        # find indices of retention times within current step
+        if i == 1
+            idx_start = findfirst(x -> x >= t_start, Rt)
+        else
+            idx_start = findfirst(x -> x >= t_start, Rt) + 1
+        end
+        idx_end = findfirst(x -> x >= t_end, Rt)
+        if i != length(b_modifiers)
+
+            # interpolate b_modifier values for retention times within current step
+            if b_start == b_end # no change in %B
+                b_modifiers[i] = Vector{Float32}(ones(length(idx_start:idx_end))) .* b_end
+            else  # %B increases or decreases
+                b_modifiers[i] = collect(b_start:((b_end-b_start)/(idx_end-idx_start)):b_end)
+
+            end
+
+        else
+            #For the end part to make sure the length is correct
+            if b_start == b_end  # no change in %B
+                b_modifiers[i] = Vector{Float32}(ones(length(idx_start:length(Rt)))) .* b_end
+            else   # %B increases or decreases
+                b_modifiers[i] = collect(b_start:((b_end-b_start)/(length(Rt)-idx_start)):b_end)
+            end
+        end
+    end
+    b_modifiers_final = reduce(vcat, b_modifiers)
+    return b_modifiers_final
+end
+function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::Float64, gradient::DataFrame)
 
     #Assign peaks to each of the windows
     Peaks_per_window, time_diff = Peaks_p_window(wind_size, Rt, SAFD_output)
@@ -150,14 +190,15 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
         end
     end
     #To calculate the slope of the gradient in a specific window
+    grad = gradient_curve(gradient,Rt)
     Split = window_split_Rt(Rt,wind_size)
     tot_unresolved_final[:,3] = Vector{Float64}(zeros((length(Split))-1))
     # first define pos at the first Split for the gradient 
     pos = findfirst(x->x>=Split[1], Rt)
-    @time for i = 1:length(Split)-1
+    for i = 1:length(Split)-1
         # save the index of the i + 1 location in temp to not overwrite the pos variable
         tmp = findfirst(x->x>=Split[i+1], Rt)
-        tot_unresolved_final[i,3] = (B_gradient_final[tmp] - B_gradient_final[pos])/(Split[i+1]-Split[i])
+        tot_unresolved_final[i,3] = (grad[tmp] - grad[pos])/(Split[i+1]-Split[i])
         # overwrite pos since the index in tmp is equal to the next position that we want to use
         pos = tmp
     end
@@ -167,7 +208,7 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
                         tot_unresolved_final[:,5],Unresolved_compared_to_total = tot_unresolved_final[:,6])
 
     #The end result in the amount of peaks that have a Resolution in Rt and in MS lower than 1.5
-    return tot_unresolved_final, colors, final_df
+    return tot_unresolved_final, colors, final_df, grad
 
 end
 function window_split_Rt(Rt::Vector{Float32}, wind_size::Int64)
@@ -213,8 +254,8 @@ function Peaks_p_window(wind_size::Int64, Rt::Vector{Float32}, SAFD_output::Data
     end
     return Peaks_per_window, time_diff
 end
-function plot_heatmap(SAFD::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int)
-    split = window_split_Rt(Rt, wind_size)
+function plot_heatmap(SAFD::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::Vector{Float64})
+    split = window_split_Rt(Rt, 12)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
         color=:plasma,
@@ -225,31 +266,36 @@ function plot_heatmap(SAFD::DataFrame, Rt::Vector{Float32}, unique_mz_values::Ve
         ylabel="m/z",
         title="Heat map of pest mix",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
-        bottom_margin=8.5Plots.mm
+        bottom_margin=8.5Plots.mm,
+        colorbar = false,
+        xticks = (round.(split; digits = 1)),
+        yticks = (0:100:1200)
+
     )
-    #color=[:red, :red, :yellow, :green]
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
-    paint = [:Red, :Orange, :Green, :Yellow]
-    colors_final::Vector{Symbol} = paint[colors]
-    mapping = Dict(1 => "Unresolved in both", 2 => "Resolved only in RT", 3 => "Resolved in both MS and RT", 4 => "Resolved in MS only")
-    labels_final::Vector{String} = map(x -> mapping[x], colors)
-    p2 = scatter!(SAFD[:, 4], SAFD[:, 8],
+    paint = paint = [:Red, :Orange, :Green, :Yellow]
+    colors_final = paint[colors]
+    mapping = Dict(1 => "Unresolved in RT and MS", 2 => "Resolved in MS only", 3 => "Resolved in RT only", 4 => "Fully resolved")
+    labels_final = map(x -> mapping[x], colors)
+    p2 = scatter!(SAFD_output[:, 4], SAFD_output[:, 8],
         #series_annotations = text.(1:length(SAFD_output[:,4]),size = 1),
         markershape=:xcross,
         color=colors_final,
         group=labels_final,
-        legend=true,
+        legend=:topleft,
         markersize=2.5,
-        title="Pest mix, 2000 iterations, S/N = 3, r = 0.9, accepted_res = 1.5",
+        title="Pest mix, 2000 iterations, S/N = 3, r = 0.9, accepted_res = 1.5, With componetization (866 features)",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
     )
 
     for i = 1:length(split)
         @show i
-        p2 = plot!(ones(Int64(maximum(unique_mz_values))) .* (split[i]), collect(1:1:Int64(maximum(unique_mz_values))), color=:red, legend=true, label=false)
+        p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, legend=true, label=false)
         display(p2)
     end
+    p2 = plot!(twinx(), Rt, gradient, yticks = (0:5:100), label = ("gradient"), ylabel = ("%B"), linewidth = 5, linestyle = :dot, legend = :topright)
+    return p2
 end
 function calculate_percentage_coverage(intensities::Matrix{Float32}, threshold::Int64)
     # Apply threshold to intensities to remove noise
