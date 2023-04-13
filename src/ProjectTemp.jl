@@ -13,6 +13,7 @@ include("/Users/tobias/.julia/dev/ProjectTemp2/src/Functionalized and sped up co
     SAFD_output = CSV.read("/Users/tobias/Downloads/PestMix1-8_1000ug-L_Tea_1-10dil_1ul_AllIon_pos_18_report.csv", DataFrame)
     SAFD_output_100ppb = CSV.read("/Users/tobias/Downloads/210705_ToF_JO_004-100ppb Drugs_report.csv", DataFrame)
     SAFD_output_Stef = CSV.read("/Users/tobias/Downloads/Stef paper data_report.csv", DataFrame)
+    filenames = ["pes_mix9_m1.mzXML"]
 #Set filename
     filenames = ["Stef paper data.mzXML"]
     filenames = ["PestMix1-8_1000ug-L_Tea_1-10dil_1ul_AllIon_pos_18.mzXML"]
@@ -27,14 +28,25 @@ include("/Users/tobias/.julia/dev/ProjectTemp2/src/Functionalized and sped up co
 
 FileName = m[1]
 #Run SAFD 3D
+max_numb_iter = 50
+max_t_peak_w=300 # or 20
+res=20000
+min_ms_w=0.02
+r_thresh=0.9
+min_int=2000
+sig_inc_thresh=5
+S2N=3
+
+min_peak_w_s=3
     GC.gc()
-    @time rep_table, SAFD_output_Stef = safd_s3D(mz_val, mz_int, Rt, FileName, path, max_numb_iter,
+    @time rep_table, SAFD_output = safd_s3D(mz_val, mz_int, Rt, FileName, path, max_numb_iter,
     max_t_peak_w, res, min_ms_w, r_thresh, min_int, sig_inc_thresh, S2N, min_peak_w_s)
 
 #Componentization of features
     # Parameters for CompCreate
     pathin = "/Users/tobias/Downloads" 
     path2features= "/Users/tobias/Downloads/PestMix1-8_1000ug-L_Tea_1-10dil_1ul_AllIon_pos_18_report.csv"
+    path2features= "/Users/tobias/Downloads/pes_mix9_m1_report.csv"
     mass_win_per=0.8
     ret_win_per=0.5
     r_thresh=0.9
@@ -53,7 +65,7 @@ FileName = m[1]
     gradient_pest = CSV.read("/Users/tobias/Library/CloudStorage/OneDrive-UvA/Gradient pesticides.csv", DataFrame)
     results, colors, df_1, gradient = @time unresolved_per_window_Rt_and_MS(Rt, SAFD_output, 12, 1.5, gradient_pest)
     results
-    colors
+    colors[37] = 4
     df_1
     gradient
 #Plot the heatmap with features and windows
@@ -79,7 +91,7 @@ FileName = m[1]
 
 
     savefig("/Users/tobias/Library/CloudStorage/OneDrive-UvA/Julia Research project/Figures/Gradient/Heatmap with gradient overlay.png")
-
+SAFD_output
     export mass_align, resolutions, unresolved_per_window_Rt_and_MS, window_split_Rt, Peaks_p_window,
         plot_heatmap
 end

@@ -1,6 +1,6 @@
 
 using Statistics, SAFD, CSV, DataFrames, LoopVectorization, StatsPlots, Distributions
-using MS_Import, LinearAlgebra, CompCreate, JLD2
+using MS_Import, LinearAlgebra, CompCreate, JLD2, VoronoiCells, GeometryBasics, Random
 
 function mass_align(Rt::Vector{Float32}, Mz_values::Matrix{Float32}, Mz_intensity::Matrix{Float32})
     # Round the MS-values to the nearest integer
@@ -125,13 +125,15 @@ function gradient_curve(data::DataFrame, Rt::Vector{Float32})
     b_modifiers_final = reduce(vcat, b_modifiers)
     return b_modifiers_final
 end
+wind_size = 12
 function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::Float64, gradient::DataFrame)
 
     #Assign peaks to each of the windows
     Peaks_per_window, time_diff = Peaks_p_window(wind_size, Rt, SAFD_output)
+    #Calculate orthogonality score for weach window
     #Make some empty arrays to store data
     #Store results
-    tot_unresolved_final::Matrix{Float32} = zeros(wind_size, 6)
+    tot_unresolved_final::Matrix{Float32} = zeros(wind_size, 7)
     #Assing colors for plotting
     colors = Vector{Int32}(undef, length(SAFD_output[:, 4]))
     #This loop  will go calculate the resolution in Rt and MS for the features in each window
@@ -147,6 +149,11 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
             colors[peak_index] = 4
         #for handling the case when there are multiple peaks in the window
         else 
+            #Calculating the orthogonality of the window
+            Rt_norm, MS_norm = normalize_lc_ms(SAFD_output[Windows[i],:])
+            tot_unresolved_final[i,7] = ortho_voronoi(Rt_norm, MS_norm, 2.2)
+            
+            #############
             res_Rt, res_M = resolutions(SAFD_output[Peaks_per_window[i][1]:Peaks_per_window[i][end], :])
             #Initialize the bitmatrixes
             resolved_Rt_f = falses(size(res_M, 1))
@@ -205,7 +212,7 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
 
     final_df::DataFrame = DataFrame(Window_Start = tot_unresolved_final[:,1], Window_end = tot_unresolved_final[:,2], Gradient_slope = 
                         tot_unresolved_final[:,3],Unresolved_peaks = tot_unresolved_final[:,4], Unresolved_compared_to_window = 
-                        tot_unresolved_final[:,5],Unresolved_compared_to_total = tot_unresolved_final[:,6])
+                        tot_unresolved_final[:,5],Unresolved_compared_to_total = tot_unresolved_final[:,6], Voronoi_orthogonality = tot_unresolved_final[:,7])
 
     #The end result in the amount of peaks that have a Resolution in Rt and in MS lower than 1.5
     return tot_unresolved_final, colors, final_df, grad
@@ -254,12 +261,12 @@ function Peaks_p_window(wind_size::Int64, Rt::Vector{Float32}, SAFD_output::Data
     end
     return Peaks_per_window, time_diff
 end
-function plot_heatmap(SAFD::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::Vector{Float64})
+function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::DataFrame)
     split = window_split_Rt(Rt, 12)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
         color=:plasma,
-        clims=(25000, 80000),
+        clims=(11500000, 11520000),
         #ylims = (50,600),
         size=(1280, 720),
         xlabel="Rt",
@@ -273,9 +280,9 @@ function plot_heatmap(SAFD::DataFrame, Rt::Vector{Float32}, unique_mz_values::Ve
 
     )
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
-    paint = paint = [:Red, :Orange, :Green, :Yellow]
+    paint = [:Red, :Purple, :Green, :Orange]
     colors_final = paint[colors]
-    mapping = Dict(1 => "Unresolved in RT and MS", 2 => "Resolved in MS only", 3 => "Resolved in RT only", 4 => "Fully resolved")
+    mapping = Dict(1 => "Unresolved in RT and MS", 2 => "Resolved in Rt only", 3 => "Resolved in both", 4 => "Resolved in MS only")
     labels_final = map(x -> mapping[x], colors)
     p2 = scatter!(SAFD_output[:, 4], SAFD_output[:, 8],
         #series_annotations = text.(1:length(SAFD_output[:,4]),size = 1),
@@ -283,124 +290,150 @@ function plot_heatmap(SAFD::DataFrame, Rt::Vector{Float32}, unique_mz_values::Ve
         color=colors_final,
         group=labels_final,
         legend=:topleft,
-        markersize=2.5,
+        markersize=5,
         title="Pest mix, 2000 iterations, S/N = 3, r = 0.9, accepted_res = 1.5, With componetization (866 features)",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
     )
-
+    window_split_Rt(Rt,wind_size)
     for i = 1:length(split)
         @show i
         p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, legend=true, label=false)
         display(p2)
     end
+    gradient = gradient_curve(gradient, Rt)
     p2 = plot!(twinx(), Rt, gradient, yticks = (0:5:100), label = ("gradient"), ylabel = ("%B"), linewidth = 5, linestyle = :dot, legend = :topright)
     return p2
 end
-function calculate_percentage_coverage(intensities::Matrix{Float32}, threshold::Int64)
-    # Apply threshold to intensities to remove noise
-    intensities_masked::BitMatrix = intensities .>= threshold
-    # Count the number of colored pixels in the heatmap plot
-    total_pixels::Int32 = length(intensities_masked[:,1])*length(intensities_masked[1,:])
-    #olred_pixels = sum(intensities_masked)
-    colored_pixels::Int32 = length(findall(x->x==true, intensities_masked))
-    # Calculate the percentage of the heatmap plot covered by the LC-MS data
-    coverage_percentage::Float32 = colored_pixels / total_pixels * 100
+function ortho_voronoi(x::Vector{Float64},y::Vector{Float64}, k)
+    #Setting the maximum possible std
+    rect = Rectangle(Point2(0, 0), Point2(1, 1))
+    stds = zeros(100)
+    for i in eachindex(stds)
+        x_rand = rand(length(x))./(i)
+        y_rand = rand(length(y))./(i)
+        points_rand = Point2.(x_rand,y_rand)
+        tess = voronoicells(points_rand, rect)
+        a = voronoiarea(tess)
+        stds[i] = std(a)/sqrt(length(x))
+    end
+    max_std = quantile(stds, 0.95)
 
-    return coverage_percentage
+    #Real data
+    points = Point2.(x,y)
+    tess = voronoicells(points, rect)
+    a_data = voronoiarea(tess)
+    std_real = std(a_data)/sqrt((length(x)))
+
+    ortho_score = tanh(1.4 * (1 - (std_real / max_std)) ^8)
+    return ortho_score
 end
-function mat_split(M::Matrix{Float32}, max_mz::Int64, Gradient_end::Float64)
-    #Trimming for max_mz and end_gradient
-    matrix_grad = M[1:(findfirst(x->Gradient_end<x, Rt)),:]
-    matrix_mz = matrix_grad[:,1:(findfirst(x->x>max_mz, unique_mz_values))]
+function load_and_prep_data(pathin, filenames, path2features)
+    #Import MS data
+    GC.gc()
+    mz_thresh =[0,0]
+    @time mz_val, mz_int, t0, t_end, m, path, msModel, msIonisation, msManufacturer,
+    polarity, Rt = import_files_MS1(pathin, filenames, mz_thresh)
 
-    M_final = matrix_mz'
-    m,n = size(M_final)
+    #Componentization of features
+    # Parameters for CompCreate
+    
+    mass_win_per=0.8
+    ret_win_per=0.5
+    r_thresh=0.9
+    delta_mass=0.004
+    min_int=300 # Not needed for comp_ms1()
+    
+    
+    chrom=import_files(pathin,filenames,mz_thresh)
+    
+    
+    ## For only MS1
+    SAFD_output = comp_ms1(chrom,path2features,mass_win_per,ret_win_per,r_thresh,delta_mass, min_int)
+    
+    #Align masses and run resolutions algorithm
+    unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
 
-    sub_matrix_row = Int(trunc(m/3))    
-    sub_matrix_col = Int(trunc(n/3))
-
-    A1 = M_final[1:min(sub_matrix_row, m), 1:min(sub_matrix_col, n)]
-    A2 = M_final[(sub_matrix_row+1):min(2*sub_matrix_row, m), 1:min(sub_matrix_col, n)]
-    A3 = M_final[(2*sub_matrix_row+1):min(3*sub_matrix_row, m), 1:min(sub_matrix_col, n)]
-
-    B1 = M_final[1:min(sub_matrix_row, m), (sub_matrix_col+1):min(2*sub_matrix_col, n)]
-    B2 = M_final[(sub_matrix_row+1):min(2*sub_matrix_row, m), (sub_matrix_col+1):min(2*sub_matrix_col, n)]
-    B3 = M_final[(2*sub_matrix_row+1):min(3*sub_matrix_row, m), (sub_matrix_col+1):min(2*sub_matrix_col, n)]
-
-    C1 = M_final[1:min(sub_matrix_row, m), (2*sub_matrix_col+1):min(3*sub_matrix_col, n)]
-    C2 = M_final[(sub_matrix_row+1):min(2*sub_matrix_row, m), (2*sub_matrix_col+1):min(3*sub_matrix_col, n)]
-    C3 = M_final[(2*sub_matrix_row+1):min(3*sub_matrix_row, m), (2*sub_matrix_col+1):min(3*sub_matrix_col, n)]
-
-
-    #For plotting
-
-    h_line_1 = ones(n).* unique_mz_values[sub_matrix_row*1]
-    h_line_2 = ones(n).* unique_mz_values[sub_matrix_row*2]
-    v_line_1 = ones(m).* Rt[sub_matrix_col*1]
-    v_line_2 = ones(m).* Rt[sub_matrix_col*2]
-
-    heatmap(Rt[1:length(matrix_grad[:,1])], unique_mz_values[1:length(matrix_mz[1,:])], matrix_mz',
-        color=:plasma,
-        clims=(25000, 80000),
-        legend = false,
-        size=(1280, 720),
-        xlabel="Rt",
-        ylabel="m/z",
-        title="Heat map of pest mix",
-        left_margin=5Plots.mm, right_margin=7.5Plots.mm,
-        bottom_margin=8.5Plots.mm)
-
-
-    plot!(Rt[1:length(matrix_grad[:,1])], h_line_1, c =:red, linestyle = :dash)
-    plot!(Rt[1:length(matrix_grad[:,1])], h_line_2, c =:red, linestyle = :dash)
-    plot!(v_line_1, unique_mz_values[1:length(matrix_mz[1,:])], c =:red, linestyle = :dash)
-    p_f = plot!(v_line_2, unique_mz_values[1:length(matrix_mz[1,:])], c =:red, linestyle = :dash)
-
-
-   
-    return A1, A2, A3, B1, B2, B3, C1, C2, C3, h_line_1, h_line_2, v_line_1, v_line_2, p_f
+    return unique_mz_values,plot_matrix, SAFD_output, Rt
 end
-function calc_coverage_grid(A1, A2, A3, B1, B2, B3, C1, C2, C3, threshold)
-
-    A1_cov = calculate_percentage_coverage(A1, threshold)
-    A2_cov = calculate_percentage_coverage(A2, threshold)
-    A3_cov = calculate_percentage_coverage(A3, threshold)
-    B1_cov = calculate_percentage_coverage(B1, threshold)
-    B2_cov = calculate_percentage_coverage(B2, threshold)
-    B3_cov = calculate_percentage_coverage(B3, threshold)
-    C1_cov = calculate_percentage_coverage(C1, threshold)
-    C2_cov = calculate_percentage_coverage(C2, threshold)
-    C3_cov = calculate_percentage_coverage(C3, threshold)
-
-    mean_cov = mean([A1_cov, A2_cov, A3_cov, B1_cov, B2_cov, B3_cov,
-                     C1_cov, C2_cov, C3_cov])
-    std_cov = std([A1_cov, A2_cov, A3_cov, B1_cov, B2_cov, B3_cov,
-                   C1_cov, C2_cov, C3_cov])
-
-    return mean_cov, std_cov
+function normalize_lc_ms(SAFD_output::DataFrame)
+    Rt_vals = SAFD_output[:,4]
+    MS_vals = SAFD_output[:,8]
+    Rt_norm = zeros(length(Rt_vals))
+    MS_norm = zeros(length(MS_vals))
+    #Test rand data
+    for i = 1:length(Rt_vals)
+        Rt_norm[i] = (Rt_vals[i]-minimum(Rt_vals))/(maximum(Rt_vals)-minimum(Rt_vals))
+        MS_norm[i] = (MS_vals[i]-minimum(MS_vals))/(maximum(MS_vals) - minimum(MS_vals))
+    end
+    return Rt_norm, MS_norm
 end
-function mat_split_old(M::Matrix{Float64})
-    m,n = size(M)
+filenames = ["PestMix1-8_1000ug-L_Tea_1-10dil_1ul_AllIon_pos_18.mzXML"]
+pathin = "/Users/tobias/Downloads" 
+path2features= "/Users/tobias/Downloads/PestMix1-8_1000ug-L_Tea_1-10dil_1ul_AllIon_pos_18_report.csv"
+gradient_pest = CSV.read("/Users/tobias/Library/CloudStorage/OneDrive-UvA/Gradient pesticides.csv", DataFrame)
+unique_mz_values,plot_matrix, SAFD_output, Rt = load_and_prep_data(pathin, filenames, path2features)
+results, colors, df_1, gradient = @time unresolved_per_window_Rt_and_MS(Rt, SAFD_output, 12, 1.5, gradient_pest)
+results
+plot_heatmap(SAFD_output,Rt,unique_mz_values,plot_matrix,12, gradient_pest)
 
-    sub_matrix_row = Int(trunc(m/3))
-    sub_matrix_col = Int(trunc(n/3))
+Rt_norm, MS_norm = normalize_lc_ms(SAFD_output)
 
-    A1 = M_final[1:Int((sub_matrix_row)*1),1:Int((sub_matrix_col)*1)]
-    A2 = M_final[Int((sub_matrix_row)*1):Int((sub_matrix_row)*2), 1:Int((sub_matrix_col)*1)]
-    A3 = M_final[Int((sub_matrix_row)*2):Int((sub_matrix_row)*3), 1:Int((sub_matrix_col)*1)]
-
-    B1 = M_final[1:Int((sub_matrix_row)*1), Int((sub_matrix_col)*1):Int((sub_matrix_col)*2)]
-    B2 = M_final[Int((sub_matrix_row)*1):Int((sub_matrix_row)*2), Int((sub_matrix_col)*1):Int((sub_matrix_col)*2)]
-    B3 = M_final[Int((sub_matrix_row)*2):Int((sub_matrix_row)*3), Int((sub_matrix_col)*1):Int((sub_matrix_col)*2)]
-
-    C1 = M_final[1:Int((sub_matrix_row)*1), Int((sub_matrix_col)*2):Int((sub_matrix_col)*3)]
-    C2 = M_final[Int((sub_matrix_row)*1):Int((sub_matrix_row)*2), Int((sub_matrix_col)*2):Int((sub_matrix_col)*3)]
-    C3 = M_final[Int((sub_matrix_row)*2):Int((sub_matrix_row)*3), Int((sub_matrix_col)*2):Int((sub_matrix_col)*3)]
-
-
-
-    return A1, A2, A3, B1, B2, B3, C1, C2, C3
+#Ortho per window
+Windows, time_diff = Peaks_p_window(12, Rt, SAFD_output)
+Windows
+SAFD_output
+ortho = zeros(length(Windows))
+for i = 1:length(ortho)
+    if length(Windows[i]) > 1
+        Rt_norm, MS_norm = normalize_lc_ms(SAFD_output[Windows[i],:])
+        ortho[i] = ortho_voronoi(Rt_norm, MS_norm, 2.2)
+    end
 end
 
+
+ortho_voronoi(rand(100), rand(100), 2)
+
+k_s = collect(2:0.05:4)
+scores = zeros(200, length(k_s))
+for i = 2:200
+    for k in eachindex(k_s)
+        scores[i,k] = ortho_voronoi(rand(i),rand(i),k_s[k])
+    end
+    @show i
+end
+
+scores
+
+heatmap(k_s, collect(1:200),scores)
+
+score_real = zeros(length(k_s))
+score_grid = zeros(length(k_s))
+score_random = zeros(length(k_s))
+score_correlated = zeros(length(k_s))
+score_art_1 = zeros(length(k_s))
+score_art_2 = zeros(length(k_s))
+score_art_3 = zeros(length(k_s))
+score_art_4 = zeros(length(k_s))
+for i in eachindex(k_s)
+    score_real[i] = ortho_voronoi(Rt_norm, MS_norm, k_s[i])
+    score_grid[i] = ortho_voronoi(x_grid,y_grid, k_s[i])
+    score_random[i] = ortho_voronoi(x_rand, y_rand, k_s[i])
+    score_correlated[i] = ortho_voronoi(x_corr,y_corr, k_s[i])
+    score_art_1[i] = ortho_voronoi(x_art_1, y_art_1, k_s[i])
+    score_art_2[i] = ortho_voronoi(x_art_2, y_art_2, k_s[i])
+    score_art_3[i] = ortho_voronoi(x_art_3, y_art_3, k_s[i])
+    score_art_4[i] = ortho_voronoi(x_art_4, y_art_4, k_s[i])
+    @show i
+end
+
+scatter(k_s, score_real, label = "Real data", size = (1280,720), title = "Effect of k on the different cases", xticks = (2:0.05:4), xlabel = "k value", ylabel = "orthogonality score", left_margin=5Plots.mm, right_margin=7.5Plots.mm,
+bottom_margin=8.5Plots.mm, yticks = (0:0.025:1), ylims = (0,1))
+scatter!(k_s, score_grid, label = "Grid data", size = (1280,720))
+scatter!(k_s, score_random, label = "Random data", size = (1280,720))
+scatter!(k_s, score_correlated, label = "Correlated data", size = (1280,720))
+scatter!(k_s, score_art_1, label = "Corners data", size = (1280,720))
+scatter!(k_s, score_art_2, label = "L shape data", size = (1280,720))
+scatter!(k_s, score_art_3, label = "2 lines data", size = (1280,720))
+scatter!(k_s, score_art_4, label = "all in one line data", size = (1280,720))
 

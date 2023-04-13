@@ -6,7 +6,7 @@ path = "/Users/tobias/Downloads"
 filenames = ["Stef paper data.mzXML"]
 filenames = ["PestMix1-8_1000ug-L_Tea_1-10dil_1ul_AllIon_pos_18.mzXML"]
 filenames = ["210705_ToF_JO_004-100ppb Drugs.mzXML"]
-mz_thresh = [0, 650]
+mz_thresh = [0, 0]
 mz_val
 #Or just load some old data
 
