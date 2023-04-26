@@ -133,7 +133,7 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
     #Calculate orthogonality score for weach window
     #Make some empty arrays to store data
     #Store results
-    tot_unresolved_final::Matrix{Float32} = zeros(wind_size, 7)
+    tot_unresolved_final::Matrix{Float32} = zeros(wind_size, 8)
     #Assing colors for plotting
     colors = Vector{Int32}(undef, length(SAFD_output[:, 4]))
     #This loop  will go calculate the resolution in Rt and MS for the features in each window
@@ -142,6 +142,7 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
         tot_unresolved_final[i, 2] = (time_diff * (i))
         #When there are no peaks in a window
         if length(Peaks_per_window[i]) == 0
+            
             continue
         #When there is only one peak in a window
         elseif length(Peaks_per_window[i]) == 1
@@ -149,9 +150,18 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
             colors[peak_index] = 4
         #for handling the case when there are multiple peaks in the window
         else 
-            #Calculating the orthogonality of the window
-            Rt_norm, MS_norm = normalize_lc_ms(SAFD_output[Windows[i],:])
-            tot_unresolved_final[i,7] = ortho_voronoi(Rt_norm, MS_norm, 2.2)
+            #Adding weights depending on the mass Distributions
+            top_95 = zeros(wind_size)
+            for i = 1:wind_size
+                if length(Peaks_per_window[i]) > 0
+                    Prior = fit_mle(Gamma, Vector{Float32}(SAFD_output[Peaks_per_window[i],8]))
+                    top_95[i] = quantile(Prior, 0.95)
+                end
+            end
+            Mass_weights = (top_95 .-minimum(top_95))./maximum(top_95).-minimum(top_95)
+            #Calculating the orthogonality of the window with weights
+            Rt_norm, MS_norm = normalize_lc_ms(SAFD_output[Peaks_per_window[i],:])
+            tot_unresolved_final[i,7] = surface_voronoi(Rt_norm, MS_norm, 2.2) * Mass_weights[i]
             
             #############
             res_Rt, res_M = resolutions(SAFD_output[Peaks_per_window[i][1]:Peaks_per_window[i][end], :])
@@ -191,9 +201,11 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
     for i = 1:wind_size
         if length(Peaks_per_window[i]) > 1
             tot_unresolved_final[i,5] = (tot_unresolved_final[i,4]/length(Peaks_per_window[i]))*100
-        end
-        if length(Peaks_per_window[i]) > 1
             tot_unresolved_final[i,6] = (tot_unresolved_final[i,4]/length(SAFD_output[:,4]))*100
+            #This sets the final score for a window
+            tot_unresolved_final[i,8] = ((tot_unresolved_final[i,6]/100) + tot_unresolved_final[i,7])/2
+        else
+            tot_unresolved_final[i,8] = 1
         end
     end
     #To calculate the slope of the gradient in a specific window
@@ -209,10 +221,10 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
         # overwrite pos since the index in tmp is equal to the next position that we want to use
         pos = tmp
     end
-
+    
     final_df::DataFrame = DataFrame(Window_Start = tot_unresolved_final[:,1], Window_end = tot_unresolved_final[:,2], Gradient_slope = 
                         tot_unresolved_final[:,3],Unresolved_peaks = tot_unresolved_final[:,4], Unresolved_compared_to_window = 
-                        tot_unresolved_final[:,5],Unresolved_compared_to_total = tot_unresolved_final[:,6], Voronoi_orthogonality = tot_unresolved_final[:,7])
+                        tot_unresolved_final[:,5],Unresolved_compared_to_total = tot_unresolved_final[:,6], Voronoi_orthogonality = tot_unresolved_final[:,7], final_score = tot_unresolved_final[:,8])
 
     #The end result in the amount of peaks that have a Resolution in Rt and in MS lower than 1.5
     return tot_unresolved_final, colors, final_df, grad
@@ -266,10 +278,10 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
         color=:plasma,
-        clims=(11500000, 11520000),
+        clims=(20000, 80000),
         #ylims = (50,600),
         size=(1280, 720),
-        xlabel="Rt",
+        xlabel="Rt (min)",
         ylabel="m/z",
         title="Heat map of pest mix",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
@@ -290,7 +302,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         color=colors_final,
         group=labels_final,
         legend=:topleft,
-        markersize=5,
+        markersize=2.5,
         title="Pest mix, 2000 iterations, S/N = 3, r = 0.9, accepted_res = 1.5, With componetization (866 features)",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
@@ -305,27 +317,20 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     p2 = plot!(twinx(), Rt, gradient, yticks = (0:5:100), label = ("gradient"), ylabel = ("%B"), linewidth = 5, linestyle = :dot, legend = :topright)
     return p2
 end
-function ortho_voronoi(x::Vector{Float64},y::Vector{Float64}, k)
-    #Setting the maximum possible std
-    rect = Rectangle(Point2(0, 0), Point2(1, 1))
-    stds = zeros(100)
-    for i in eachindex(stds)
-        x_rand = rand(length(x))./(i)
-        y_rand = rand(length(y))./(i)
-        points_rand = Point2.(x_rand,y_rand)
-        tess = voronoicells(points_rand, rect)
-        a = voronoiarea(tess)
-        stds[i] = std(a)/sqrt(length(x))
-    end
-    max_std = quantile(stds, 0.95)
+function surface_voronoi(x::Vector{Float64},y::Vector{Float64}, k)
+    #Setting the maximum possible std using the model
+
+    max_std = (0.5960069556116379 * length(x)^(-0.4724248759777625))/sqrt(length(x))
 
     #Real data
+    rect = Rectangle(Point2(0, 0), Point2(1, 1))
     points = Point2.(x,y)
     tess = voronoicells(points, rect)
     a_data = voronoiarea(tess)
-    std_real = std(a_data)/sqrt((length(x)))
+    std_real = std(a_data)/sqrt(length(x))
 
-    ortho_score = tanh(1.4 * (1 - (std_real / max_std)) ^8)
+    ortho_score = tanh(k * (1 - (std_real / max_std))^7.5)/tanh(k)
+    #ortho_score =  (1 - (std_real / max_std))^1/k
     return ortho_score
 end
 function load_and_prep_data(pathin, filenames, path2features)
@@ -371,15 +376,98 @@ end
 filenames = ["PestMix1-8_1000ug-L_Tea_1-10dil_1ul_AllIon_pos_18.mzXML"]
 pathin = "/Users/tobias/Downloads" 
 path2features= "/Users/tobias/Downloads/PestMix1-8_1000ug-L_Tea_1-10dil_1ul_AllIon_pos_18_report.csv"
-gradient_pest = CSV.read("/Users/tobias/Library/CloudStorage/OneDrive-UvA/Gradient pesticides.csv", DataFrame)
+gradient = CSV.read("/Users/tobias/Library/CloudStorage/OneDrive-UvA/Gradient pesticides.csv", DataFrame)
 unique_mz_values,plot_matrix, SAFD_output, Rt = load_and_prep_data(pathin, filenames, path2features)
-results, colors, df_1, gradient = @time unresolved_per_window_Rt_and_MS(Rt, SAFD_output, 12, 1.5, gradient_pest)
+results, colors, df_1, gradient_curvv = @time unresolved_per_window_Rt_and_MS(Rt, SAFD_output, 12, 1.5, gradient)
 results
-plot_heatmap(SAFD_output,Rt,unique_mz_values,plot_matrix,12, gradient_pest)
 
-Rt_norm, MS_norm = normalize_lc_ms(SAFD_output)
+scatter(results[:,8])
+plot(gradient_curvv)
+
+Windows = Peaks_p_window(12,Rt,SAFD_output)
+length(Windows[1][5])
+
+
+
+
+plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient)
+post
+x = Vector{Float64}(SAFD_output[:,8])
+pri = fit_mle(Gamma,x)
+post, target = uncertainty_estimate(x,pri)
+histogram(x,bins=50,label="Data",normalize=:probability, legend =:topright)
+plot!(fit_mle(Gamma,x),label="Prior distribution")
+plot!(fit_mle(Distributions.Normal, x),label="MLE")
+plot!(target,10^3 .* post,label="Posterior distribution * 1000",c=:black)
+#plot!(fit_mle(Normal, m),label="Model")
+xlabel!("m/z")
+ylabel!("Probablity")
+#plot!(fit_mle(Normal, m),label="Model")
+xlabel!("m/z")
+ylabel!("Probability")
+target
+histogram!(target, normalize = :probability)
+post
+
+
+savefig("/Users/tobias/Library/CloudStorage/OneDrive-UvA/For presentation/Heatmap features.png")
+post
+
+plot(post)
+
+minimum(unique_mz_values)
+minimum(Rt)
+rect = Rectangle(Point2(Float64(minimum(Rt)), Float64(minimum(unique_mz_values))), Point2(Float64(maximum(Rt)), Float64(maximum(unique_mz_values))))
+points = Point2.(SAFD_output[:,4],SAFD_output[:,8])
+scatter(points)
+    tess = voronoicells(points, rect)
+    plot!(tess)
+    a_data = voronoiarea(tess)
+    std_real = std(a_data)/sqrt((length(x)))
+
+x = rand(880)*32
+y = rand(880)*1200
+scatter(x,y)
+rect = Rectangle(Point2(Float64(minimum(x)), Float64(minimum(y))), Point2(Float64(maximum(x)), Float64(maximum(y))))
+points = Point2.(x,y)
+scatter(points)
+    tess = voronoicells(points, rect)
+    plot!(tess)
+    a_data = voronoiarea(tess)
+    std_real = std(a_data)/sqrt((length(x)))
+
+####### Worst case
+std_test = zeros(120)
+stds = collect(2:25000:3000000)
+for i = eachindex(stds)
+    rect = Rectangle(Point2(Float64(minimum(Rt)), Float64(minimum(unique_mz_values))), Point2(Float64(maximum(Rt)), Float64(maximum(unique_mz_values))))
+    x  = rand(100)./stds[i] .+minimum(Rt)
+    y = rand(100)./stds[i] .+minimum(unique_mz_values)
+    points = Point2.(x,y)
+    tess = voronoicells(points, rect)
+    a_data = voronoiarea(tess)
+    std_test[i] = std(a_data)/sqrt((length(x)))
+    @show i 
+end
+
+scatter(std_test)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #Ortho per window
+
+
 Windows, time_diff = Peaks_p_window(12, Rt, SAFD_output)
 Windows
 SAFD_output
@@ -387,7 +475,7 @@ ortho = zeros(length(Windows))
 for i = 1:length(ortho)
     if length(Windows[i]) > 1
         Rt_norm, MS_norm = normalize_lc_ms(SAFD_output[Windows[i],:])
-        ortho[i] = ortho_voronoi(Rt_norm, MS_norm, 2.2)
+        ortho[i] = surface_voronoi(Rt_norm, MS_norm, 2.2)
     end
 end
 
@@ -398,7 +486,7 @@ k_s = collect(2:0.05:4)
 scores = zeros(200, length(k_s))
 for i = 2:200
     for k in eachindex(k_s)
-        scores[i,k] = ortho_voronoi(rand(i),rand(i),k_s[k])
+        scores[i,k] = ortho_voronoi(ranxd(i),rand(i),k_s[k])
     end
     @show i
 end

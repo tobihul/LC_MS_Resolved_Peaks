@@ -92,6 +92,30 @@ min_peak_w_s=3
 
     savefig("/Users/tobias/Library/CloudStorage/OneDrive-UvA/Julia Research project/Figures/Gradient/Heatmap with gradient overlay.png")
 SAFD_output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     export mass_align, resolutions, unresolved_per_window_Rt_and_MS, window_split_Rt, Peaks_p_window,
         plot_heatmap
 end
+
+
+
+
