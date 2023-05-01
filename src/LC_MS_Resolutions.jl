@@ -1,4 +1,6 @@
+__precompile__()
 module LC_MS_Resolutions
+
 using Statistics, SAFD, CSV, DataFrames, LoopVectorization, StatsPlots, Distributions
 using MS_Import, LinearAlgebra, CompCreate, JLD2, VoronoiCells, GeometryBasics, Random
 include("Functionalized and sped up code.jl")
