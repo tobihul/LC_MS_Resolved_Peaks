@@ -1,3 +1,4 @@
+__precompile__()
 module LC_MS_Resolutions
 
 using Statistics, SAFD, CSV, DataFrames, LoopVectorization, StatsPlots, Distributions
