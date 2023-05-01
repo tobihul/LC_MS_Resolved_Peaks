@@ -125,7 +125,6 @@ function gradient_curve(data::DataFrame, Rt::Vector{Float32})
     b_modifiers_final = reduce(vcat, b_modifiers)
     return b_modifiers_final
 end
-wind_size = 12
 function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::Float64, gradient::DataFrame)
 
     #Assign peaks to each of the windows
@@ -273,7 +272,7 @@ function Peaks_p_window(wind_size::Int64, Rt::Vector{Float32}, SAFD_output::Data
     end
     return Peaks_per_window, time_diff
 end
-function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::DataFrame)
+function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::DataFrame, colors::Vector{Int32})
     split = window_split_Rt(Rt, 12)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
