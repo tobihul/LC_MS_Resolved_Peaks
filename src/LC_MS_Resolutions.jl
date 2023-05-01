@@ -1,4 +1,4 @@
-module ProjectTemp2
+module LC_MS_Resolutions
 
 include("/Users/tobias/.julia/dev/ProjectTemp2/src/Functionalized and sped up code.jl")
 
