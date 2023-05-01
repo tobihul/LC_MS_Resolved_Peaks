@@ -273,7 +273,7 @@ function Peaks_p_window(wind_size::Int64, Rt::Vector{Float32}, SAFD_output::Data
     end
     return Peaks_per_window, time_diff
 end
-function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::DataFrame)
+function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::DataFrame, colors::Vector{Int32)
     split = window_split_Rt(Rt, 12)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
