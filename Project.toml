@@ -1,7 +1,7 @@
 name = "LC_MS_Resolutions"
 uuid = "09a62a7d-a2ad-4cbf-b067-53478948bd81"
 authors = ["Tobias Hulleman"]
-version = "10.1"
+version = "0.1.0"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
