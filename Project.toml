@@ -22,6 +22,7 @@ VoronoiCells = "e3e34ffb-84e9-5012-9490-92c94d0c60a4"
 
 [compat]
 julia = "1"
+MS_Import = "0.9.1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
