@@ -282,12 +282,11 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         size=(1280, 720),
         xlabel="Rt (min)",
         ylabel="m/z",
-        title="Heat map of pest mix",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
         colorbar = false,
         xticks = (round.(split; digits = 1)),
-        yticks = (0:100:1200)
+        yticks = (0:(0.1*maximum(unique_mz_values)):maximum(unique_mz_values))
 
     )
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
@@ -302,7 +301,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         group=labels_final,
         legend=:topleft,
         markersize=2.5,
-        title="Pest mix, 2000 iterations, S/N = 3, r = 0.9, accepted_res = 1.5, With componetization (866 features)",
+        title="$(filenames[1]), $max_numb_iter iterations, S/N = $S2N, r = $r_thresh, accepted_res = 1.5, Componetization -> ($(length(SAFD_output[:,1])) features)",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
     )
