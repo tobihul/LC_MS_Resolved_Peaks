@@ -272,8 +272,8 @@ function Peaks_p_window(wind_size::Int64, Rt::Vector{Float32}, SAFD_output::Data
     end
     return Peaks_per_window, time_diff
 end
-function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::DataFrame, colors::Vector{Int32},filenames::String
-                     ,pathin::Vector{String})
+function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::DataFrame, colors::Vector{Int32},filenames
+                     ,pathin)
     # Extract the last part of the pathin variable
     pathin_parts = splitdir(pathin)
     pathin_last = pathin_parts[end]
