@@ -273,7 +273,21 @@ function Peaks_p_window(wind_size::Int64, Rt::Vector{Float32}, SAFD_output::Data
     return Peaks_per_window, time_diff
 end
 function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_values::Vector{Float32}, plot_matrix::Matrix{Float32}, wind_size::Int, gradient::DataFrame, colors::Vector{Int32},filenames::Vector{String}
-                     ,max_numb_iter::Int, S2N::Int, r_thresh::Int)
+                     ,pathin::Vector{String})
+    # Extract the last part of the pathin variable
+    pathin_parts = splitdir(pathin)
+    pathin_last = pathin_parts[end]
+
+    # Extract the filename without extension
+    filename_parts = splitext(filenames[1])
+    filename_no_ext = filename_parts[1]
+
+    # Create the title
+    num_features = length(SAFD_output[:,1])
+    title_str = "$(pathin_last) -> $(filename_no_ext), $(num_features) features"
+    title_str = replace(title_str, "_" => " ") # optional: replace underscores with spaces
+    title_str = replace(title_str, "." => "") # optional: remove dots
+    title_str = uppercase(title_str) # optional: convert to uppercase
     split = window_split_Rt(Rt, 12)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
@@ -288,7 +302,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         colorbar = false,
         xticks = (round.(split; digits = 1)),
         yticks = (0:(0.1*maximum(unique_mz_values)):maximum(unique_mz_values)),
-        title="$(filenames[1]), $max_numb_iter iterations, S/N = $S2N, r = $r_thresh, accepted_res = 1.5, Componetization -> ($(length(SAFD_output[:,1])) features)"
+        title=title_str
 
     )
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
