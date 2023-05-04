@@ -312,7 +312,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         display(p2)
     end
     gradient = gradient_curve(gradient, Rt)
-    p2 = plot!(twinx(), Rt, gradient, yticks = (0:5:100), label = ("gradient"), ylabel = ("%B"), linewidth = 5, linestyle = :dot, legend = :topright)
+    p2 = plot!(twinx(), Rt, gradient, yticks = (0:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot)
     return p2
 end
 function surface_voronoi(x::Vector{Float64},y::Vector{Float64}, k)
