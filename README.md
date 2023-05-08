@@ -1,6 +1,6 @@
 # LC-MS_Resolved_Peaks.jl
 
-`#`       <h1>      # h1 heading
+ <h1>      # h1 heading
 
 In order to install the package in Julia, run the follwing: "]" to enter package manager and then "add https://github.com/tobihul/LC_MS_Resolved_Peaks"
 
