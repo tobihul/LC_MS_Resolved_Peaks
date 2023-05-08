@@ -293,20 +293,18 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
         color=:plasma,
         clims=(20000, 80000),
-        #ylims = (50,600),
         size=(1280, 720),
         xlabel="Rt (min)",
         ylabel="m/z",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
         colorbar = false,
-        xticks = (round.(split; digits = 1)),
         yticks = (0:(0.1*maximum(unique_mz_values)):maximum(unique_mz_values)),
         title=title_str
 
     )
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
-    paint = [:Red, :Purple, :Green, :Orange]
+    paint = [:Red, :hotpink1, :Green, :Orange]
     colors_final = paint[colors]
     mapping = Dict(1 => "Unresolved in RT and MS", 2 => "Resolved in Rt only", 3 => "Resolved in both", 4 => "Resolved in MS only")
     labels_final = map(x -> mapping[x], colors)
@@ -324,7 +322,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     window_split_Rt(Rt,wind_size)
     for i = 1:length(split)
         @show i
-        p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, legend=true, label=false)
+        p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, legend=true, label=false,xticks = (round.(split; digits = 1)))
         display(p2)
     end
     gradient = gradient_curve(gradient, Rt)
