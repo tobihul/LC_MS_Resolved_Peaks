@@ -15,7 +15,7 @@ Pkg.add(PackageSpec(url="https://github.com/tobihul/LC_MS_Resolved_Peaks"))
 ```
 ## Usage
 
-First, import data using **MS_Import.jl** and import your gradient csv:
+First, import data using [**MS_Import.jl**](https://bitbucket.org/SSamanipour/ms_import.jl/src/master/) and import your gradient csv:
 
 The gradient csv should be made in the following format:
 
