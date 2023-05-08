@@ -148,11 +148,11 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
             peak_index = Peaks_per_window[i][1]
             colors[peak_index] = 4
         #for handling the case when there are multiple peaks in the window
-        else 
+        else
             #Adding weights depending on the mass Distributions
             top_95 = zeros(wind_size)
             for i = 1:wind_size
-                if length(Peaks_per_window[i]) > 0
+                if length(Peaks_per_window[i]) > 1
                     Prior = fit_mle(Gamma, Vector{Float32}(SAFD_output[Peaks_per_window[i],8]))
                     top_95[i] = quantile(Prior, 0.95)
                 end
@@ -322,11 +322,11 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     window_split_Rt(Rt,wind_size)
     for i = 1:length(split)
         @show i
-        p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, legend=true, label=false,xticks = (round.(split; digits = 1)))
+        p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, legend=true, label=false)
         display(p2)
     end
     gradient = gradient_curve(gradient, Rt)
-    p2 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot)
+    p2 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(split; digits = 1)))
     return p2
 end
 function surface_voronoi(x::Vector{Float64},y::Vector{Float64}, k)
