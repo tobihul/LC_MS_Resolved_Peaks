@@ -90,7 +90,7 @@ unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
 We can now run the main function of **LC_MS_Resolved_Peaks.jl**
 
 ```julia
-results, colors, df, gradient = @time unresolved_per_window_Rt_and_MS(Rt, SAFD_output, 12, 1.5, gradient_data)
+results, colors, df, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, 12, 1.5, gradient_data)
 ```
 Finally, the results can be plotted to see where the unresolved peaks are in each window and what the gradient is doing
 
@@ -98,5 +98,7 @@ Finally, the results can be plotted to see where the unresolved peaks are in eac
 plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, colors, filenames, pathin)
 ```
 
+This is an example of what the plot will look like:
 
+![Alt Text]()
 
