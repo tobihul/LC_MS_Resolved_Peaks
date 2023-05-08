@@ -109,4 +109,4 @@ This is an example of what the plot will look like:
 An example mzXML file and gradient can be found in the repository along with the **Example.jl** file to be used as a template
 
 ## Acknowledgements
-
+I thank Saer Samanipour and Bob Pirok for supervising me during my thesis and providing insights throughout. I also thank Etienne Kant for providing the mass align and helping with bugs and code optimization. 
