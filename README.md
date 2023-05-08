@@ -87,6 +87,8 @@ Now we can align the masses for plotting
 unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
 ```
 
+## Determining resolved peaks per window and surface coverage
+
 We can now run the main function of **LC_MS_Resolved_Peaks.jl**
 
 ```julia
@@ -101,4 +103,10 @@ plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, 
 This is an example of what the plot will look like:
 
 ![Alt Text](https://github.com/tobihul/LC_MS_Resolved_Peaks/blob/master/Short%202%2C%20mix%204.png?raw=true)
+
+## Example
+
+An example mzXML file and gradient can be found in the repository along with the **Example.jl** file to be used as a template
+
+## Acknowledgements
 
