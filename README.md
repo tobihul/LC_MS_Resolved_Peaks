@@ -1,10 +1,10 @@
 # LC-MS_Resolved_Peaks.jl
 
-**LC_MS_Resolved_Peaks.jl is a package developed for my research thesis. The package takes as input any mzXML file (LC-MS) along with a csv of the gradient used. The data is divided into the desired number of windows in the RT domain and, after feature detection, the number of overlapping peaks in each window is reported. The advantage of this algorithm is the fact that the entire XIC of the data is used to determine wheter a feature is successfully resolved. In addition, the algorithm takes into account how well the features are distributed in the LC-MS space using a novel Voronoi cell surface coverage calculation. A score is calculated using the % of unresolved peaks in each window compared to the total together with the surface coverage. Please keep in mind that the surface coverage calculation and the final score are still being optimized and do not represent the final version.
+**LC_MS_Resolved_Peaks.jl** is a package developed for my research thesis. The package takes as input any mzXML file (LC-MS) along with a csv of the gradient used. The data is divided into the desired number of windows in the RT domain and, after feature detection, the number of overlapping peaks in each window is reported. The advantage of this algorithm is the fact that the entire XIC of the data is used to determine wheter a feature is successfully resolved. In addition, the algorithm takes into account how well the features are distributed in the LC-MS space using a novel Voronoi cell surface coverage calculation. A score is calculated using the % of unresolved peaks in each window compared to the total together with the surface coverage. Please keep in mind that the surface coverage calculation and the final score are still being optimized and do not represent the final version.
 
 ## Installation
 
-In order to install the ** LC_MS_Resolved_Peaks.jl package in Julia, run the follwing: "]" to enter package manager and then "add https://github.com/tobihul/LC_MS_Resolved_Peaks"
+In order to install the **LC_MS_Resolved_Peaks.jl** package in Julia, run the follwing: "]" to enter package manager and then "add https://github.com/tobihul/LC_MS_Resolved_Peaks"
 
 Alternatively: 
 
@@ -13,7 +13,25 @@ using Pkg
 Pkg.add(PackageSpec(url="https://github.com/tobihul/LC_MS_Resolved_Peaks"))
 
 ```
+## Usage
 
+First, import data using **MS_Import.jl** and import your gradient csv:
 
+The gradient csv should be made in the following format:
+
+Time | %B
+------------ | -------------
+0 | 5
+10| 95
+11| 95
+11.1| 95
+10| 5
+```julia
+using LC_MS_Resolutions
+
+pathin = "path_to_your_mzXML_file"
+filenames = "Name_of_your_mzXML_file.mzXML"
+
+```
 
 An example LC-MS dataset is included on this page along with its gradient CSV file. You can use your own data as long as it is in MZXML format
