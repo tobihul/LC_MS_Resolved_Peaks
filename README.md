@@ -31,7 +31,17 @@ using LC_MS_Resolutions
 
 pathin = "path_to_your_mzXML_file"
 filenames = "Name_of_your_mzXML_file.mzXML"
+mz_thresh = [0, 0] #Sets threshold for mz values
+int_thresh = 500 #Remove most of the noise
+gradient_data = CSV.read("path_to_your_gradient.csv", DataFrame)
 
+mz_val, mz_int, t0, t_end, m, path, msModel, msIonisation, msManufacturer,
+polarity, Rt = LC_MS_Resolutions.MS_Import.import_files_MS1(pathin, filenames, mz_thresh, int_thresh)
 ```
+Now we can run SAFD which has been described [elsewhere](https://pubs.acs.org/doi/full/10.1021/acs.analchem.9b02422):
 
+```julia
+rep_table, SAFD_output = LC_MS_Resolutions.SAFD.safd_s3D(mz_val, mz_int, Rt, FileName, path, max_numb_iter,
+max_t_peak_w, res, min_ms_w, r_thresh, min_int, sig_inc_thresh, S2N, min_peak_w_s)
+```
 An example LC-MS dataset is included on this page along with its gradient CSV file. You can use your own data as long as it is in MZXML format
