@@ -100,5 +100,5 @@ plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, 
 
 This is an example of what the plot will look like:
 
-![Alt Text]()
+![Alt Text](https://github.com/tobihul/LC_MS_Resolved_Peaks/blob/master/Short%202%2C%20mix%204.png?raw=true)
 
