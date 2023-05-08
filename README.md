@@ -26,6 +26,8 @@ Time | %B
 11| 95
 11.1| 95
 10| 5
+
+### Data import, feature detection and componentization
 ```julia
 using LC_MS_Resolutions
 
@@ -40,8 +42,61 @@ polarity, Rt = LC_MS_Resolutions.MS_Import.import_files_MS1(pathin, filenames, m
 ```
 Now we can run SAFD which has been described [elsewhere](https://pubs.acs.org/doi/full/10.1021/acs.analchem.9b02422):
 
+Adjust settings for SAFD:
+
+```julia
+max_numb_iter = 2000 
+max_t_peak_w=300 # or 20
+res=20000
+min_ms_w=0.02
+r_thresh=0.9 #How well the fitted gaussian overlaps the original peak
+min_int=10000
+sig_inc_thresh=5
+S2N=3 #minimum signal to noise ratio for SAFD to take data as a feature
+min_peak_w_s=3
+```
+
+Run SAFD: 
+
 ```julia
 rep_table, SAFD_output = LC_MS_Resolutions.SAFD.safd_s3D(mz_val, mz_int, Rt, FileName, path, max_numb_iter,
 max_t_peak_w, res, min_ms_w, r_thresh, min_int, sig_inc_thresh, S2N, min_peak_w_s)
 ```
-An example LC-MS dataset is included on this page along with its gradient CSV file. You can use your own data as long as it is in MZXML format
+
+Run componentization, this can also be found [elsewhere](https://bitbucket.org/SSamanipour/compcreate.jl/src/master/):
+
+```julia
+basename_pathin = basename(pathin)
+filename_no_ext = splitext(filenames[1])[1]
+path2features = joinpath(pathin*"/"*filename_no_ext*"_report.csv")
+mass_win_per=0.8
+ret_win_per=0.5
+r_thresh=0.9
+delta_mass=0.004
+min_int = 750
+chrom=LC_MS_Resolutions.MS_Import.import_files(pathin,filenames,mz_thresh,int_thresh)
+
+# For only MS1
+SAFD_output = LC_MS_Resolutions.CompCreate.comp_ms1(chrom,path2features,mass_win_per,ret_win_per,r_thresh,delta_mass, min_int)
+```
+Once the Componentization has been done, the file can be saved to avoid having to rerun SAFD or **CompCreate** again
+
+Now we can align the masses for plotting 
+
+```julia
+unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
+```
+
+We can now run the main function of **LC_MS_Resolved_Peaks.jl**
+
+```julia
+results, colors, df, gradient = @time unresolved_per_window_Rt_and_MS(Rt, SAFD_output, 12, 1.5, gradient_data)
+```
+Finally, the results can be plotted to see where the unresolved peaks are in each window and what the gradient is doing
+
+```julia
+plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, colors, filenames, pathin)
+```
+
+
+
