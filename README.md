@@ -131,3 +131,6 @@ An example mzXML file and gradient can be found in the repository along with the
 
 ## Acknowledgements
 I thank Saer Samanipour and Bob Pirok for supervising me during my thesis and providing insights throughout. I also thank Etienne Kant for providing the mass align function and helping with bugs and code optimization. 
+
+## Contributions 
+Issues and pull requests are welcome! Please contact the developers for further information.
