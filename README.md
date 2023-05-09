@@ -91,18 +91,30 @@ unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
 
 We can now run the main function of **LC_MS_Resolved_Peaks.jl**
 
-###Inputs
+### Inputs
 * **Rt::Vector{Float32}** this is the list of retention times of features detected by SAFD
 * **SAFD_output::DataFrame** this DataFrame contains all of the information about each feature detected in SAFD (Rt start, Rt end, MS start, MS end, peak area, etc.)
-* **wind_size::Int** This determines the number of windows that the Rt domain will be split up in for resolution calculations
-* **resolution::Int** This is the accepted resolution deciding if two peaks are resolved in Rt and/or MS domain. A resolution of 1.5 is generally accepted as baseline separation between two gaussian peaks
+* **wind_size::Int64** This determines the number of windows that the Rt domain will be split up in for resolution calculations
+* **resolution::Float64** This is the accepted resolution deciding if two peaks are resolved in Rt and/or MS domain. A resolution of 1.5 is generally accepted as baseline separation between two gaussian peaks
 * **gradient_data::DataFrame** This is your csv containing the two columns with time and %B modifier describing the gradient used
 
 ```julia
 wind_size = 12
 resolution = 1.5
-results, colors, df, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, wind_size, resolution, gradient_data)
+colors, results, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, wind_size, resolution, gradient_data)
 ```
+### Outputs
+* **colors::Vector{Int32}** this vector contains all of the colors that will be assigned to the features in the heatmap plot depending on their resolution status
+* **results::DataFrame** this DataFrame contains the results of the function for each window. Results can be seen in the table below with one window as an examle (number of rows will be equal to number of windows normally)
+*  **gradient::Vector{Float64}** this Vector is used to plot the gradient line in the heatmap in the figure
+
+
+Window_start | Window_end | Gradient_slope | Unresolved_peaks | Unresolved_compared_to_window | Unresolved_compared_to_total | Voronoi_surface_coverage | final_score
+------------ | ------------- | ------------ | ------------- | ------------ | ------------- | ------------ | -------------
+ 0.0| 1.07 | 8.69 | 9.0 | 12.0 | 5.0 | 0.5 | 0.4 |
+
+
+
 Finally, the results can be plotted to see where the unresolved peaks are in each window and what the gradient is doing
 
 ```julia
@@ -118,4 +130,4 @@ This is an example of what the plot may look like:
 An example mzXML file and gradient can be found in the repository along with the **Example.jl** file to be used as a template
 
 ## Acknowledgements
-I thank Saer Samanipour and Bob Pirok for supervising me during my thesis and providing insights throughout. I also thank Etienne Kant for providing the mass align and helping with bugs and code optimization. 
+I thank Saer Samanipour and Bob Pirok for supervising me during my thesis and providing insights throughout. I also thank Etienne Kant for providing the mass align function and helping with bugs and code optimization. 
