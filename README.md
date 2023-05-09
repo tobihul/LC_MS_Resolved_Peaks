@@ -91,8 +91,17 @@ unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
 
 We can now run the main function of **LC_MS_Resolved_Peaks.jl**
 
+###Inputs
+* **Rt::Vector{Float32}** this is the list of retention times of features detected by SAFD
+* **SAFD_output::DataFrame** this DataFrame contains all of the information about each feature detected in SAFD (Rt start, Rt end, MS start, MS end, peak area, etc.)
+* **wind_size::Int** This determines the number of windows that the Rt domain will be split up in for resolution calculations
+* **resolution::Int** This is the accepted resolution deciding if two peaks are resolved in Rt and/or MS domain. A resolution of 1.5 is generally accepted as baseline separation between two gaussian peaks
+* **gradient_data::DataFrame** This is your csv containing the two columns with time and %B modifier describing the gradient used
+
 ```julia
-results, colors, df, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, 12, 1.5, gradient_data)
+wind_size = 12
+resolution = 1.5
+results, colors, df, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, wind_size, resolution, gradient_data)
 ```
 Finally, the results can be plotted to see where the unresolved peaks are in each window and what the gradient is doing
 
@@ -100,7 +109,7 @@ Finally, the results can be plotted to see where the unresolved peaks are in eac
 plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, colors, filenames, pathin)
 ```
 
-This is an example of what the plot will look like:
+This is an example of what the plot may look like:
 
 ![Alt Text](https://github.com/tobihul/LC_MS_Resolved_Peaks/blob/master/Short%202%2C%20mix%204.png?raw=true)
 
