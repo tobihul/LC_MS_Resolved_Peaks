@@ -202,7 +202,7 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
             tot_unresolved_final[i,5] = (tot_unresolved_final[i,4]/length(Peaks_per_window[i]))*100
             tot_unresolved_final[i,6] = (tot_unresolved_final[i,4]/length(SAFD_output[:,4]))*100
             #This sets the final score for a window
-            tot_unresolved_final[i,8] = ((tot_unresolved_final[i,6]/100) + tot_unresolved_final[i,7])
+            tot_unresolved_final[i,8] = ((1-(tot_unresolved_final[i,6]/100)) + 0.5 * tot_unresolved_final[i,7])
         else
             tot_unresolved_final[i,8] = 1
         end
