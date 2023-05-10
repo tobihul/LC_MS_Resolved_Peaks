@@ -320,8 +320,8 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         bottom_margin=8.5Plots.mm,
         xticks = (round.(split; digits = 1)),
     )
-    for i in 1:length(Split)
-        vline!(p, [Split[i]], color=:red, label=false, ylims=(minimum(unique_mz_values), maximum(unique_mz_values)))
+    for i in 1:length(split)
+        vline!(p, [split[i]], color=:red, label=false, ylims=(minimum(unique_mz_values), maximum(unique_mz_values)))
     end
     display(p)
     gradient = gradient_curve(gradient, Rt)
