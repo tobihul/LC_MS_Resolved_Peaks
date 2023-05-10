@@ -202,7 +202,7 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
             tot_unresolved_final[i,5] = (tot_unresolved_final[i,4]/length(Peaks_per_window[i]))*100
             tot_unresolved_final[i,6] = (tot_unresolved_final[i,4]/length(SAFD_output[:,4]))*100
             #This sets the final score for a window
-            tot_unresolved_final[i,8] = ((tot_unresolved_final[i,6]/100) + tot_unresolved_final[i,7])/2
+            tot_unresolved_final[i,8] = ((tot_unresolved_final[i,6]/100) + tot_unresolved_final[i,7])
         else
             tot_unresolved_final[i,8] = 1
         end
@@ -223,10 +223,10 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
     
     final_df::DataFrame = DataFrame(Window_Start = tot_unresolved_final[:,1], Window_end = tot_unresolved_final[:,2], Gradient_slope = 
                         tot_unresolved_final[:,3],Unresolved_peaks = tot_unresolved_final[:,4], Unresolved_compared_to_window = 
-                        tot_unresolved_final[:,5],Unresolved_compared_to_total = tot_unresolved_final[:,6], Voronoi_orthogonality = tot_unresolved_final[:,7], final_score = tot_unresolved_final[:,8])
+                        tot_unresolved_final[:,5],Unresolved_compared_to_total = tot_unresolved_final[:,6], Voronoi_surface_coverage = tot_unresolved_final[:,7], final_score = tot_unresolved_final[:,8])
 
     #The end result in the amount of peaks that have a Resolution in Rt and in MS lower than 1.5
-    return tot_unresolved_final, colors, final_df, grad
+    return colors, final_df, grad
 
 end
 function window_split_Rt(Rt::Vector{Float32}, wind_size::Int64)
@@ -299,7 +299,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
         colorbar = false,
-        yticks = (0:(0.1*maximum(unique_mz_values)):maximum(unique_mz_values)),
+        yticks = (0:(0.1*ceil(maximum(unique_mz_values))):ceil(maximum(unique_mz_values))),
         title=title_str
 
     )
@@ -322,7 +322,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     window_split_Rt(Rt,wind_size)
     for i = 1:length(split)
         @show i
-        p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, legend=true, label=false)
+        p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, label=false)
         display(p2)
     end
     gradient = gradient_curve(gradient, Rt)
