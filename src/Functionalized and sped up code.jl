@@ -288,7 +288,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     title_str = replace(title_str, "_" => " ") # optional: replace underscores with spaces
     title_str = replace(title_str, "." => "") # optional: remove dots
     title_str = uppercase(title_str) # optional: convert to uppercase
-    split = window_split_Rt(Rt, 12)
+    split = window_split_Rt(Rt, wind_size)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
         color=:plasma,
@@ -299,7 +299,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
         colorbar = false,
-        yticks = (0:(0.1*ceil(maximum(unique_mz_values))):ceil(maximum(unique_mz_values))),
+        yticks = (0:100:ceil(maximum(unique_mz_values/100))*100),
         title=title_str,
         xticks = (round.(split; digits = 1))
     )
@@ -316,17 +316,17 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         legend=:topleft,
         markersize=2.5,
         #title="$(filenames[1]), $max_numb_iter iterations, S/N = $S2N, r = $r_thresh, accepted_res = 1.5, Componetization -> ($(length(SAFD_output[:,1])) features)",
-        left_margin=5Plots.mm, right_margin=7.5Plots.mm,
+        left_margin=5Plots.mm, right_margin=17.5Plots.mm,
         bottom_margin=8.5Plots.mm,
         xticks = (round.(split; digits = 1)),
     )
-    window_split_Rt(Rt,wind_size)
     for i = 1:length(split)
-        plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)/100))*100), color=:red, label=false,xticks = (round.(split; digits = 1)))
+        p2 = plot!(ones(2) .* (split[i]), [(minimum(unique_mz_values)), (maximum(unique_mz_values))], color=:red, label=false)
+        display(p2)
     end
     gradient = gradient_curve(gradient, Rt)
-    p2 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(split; digits = 1)))
-    return p2
+    p3 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(split; digits = 1)))
+        return p3
 end
 function surface_voronoi(x::Vector{Float64},y::Vector{Float64}, k)
     #Setting the maximum possible std using the model
