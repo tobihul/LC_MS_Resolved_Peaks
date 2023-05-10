@@ -300,15 +300,15 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         bottom_margin=8.5Plots.mm,
         colorbar = false,
         yticks = (0:(0.1*ceil(maximum(unique_mz_values))):ceil(maximum(unique_mz_values))),
-        title=title_str
-
+        title=title_str,
+        xticks = (round.(split; digits = 1))
     )
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
     paint = [:Red, :hotpink1, :Green, :Orange]
     colors_final = paint[colors]
     mapping = Dict(1 => "Unresolved in RT and MS", 2 => "Resolved in Rt only", 3 => "Resolved in both", 4 => "Resolved in MS only")
     labels_final = map(x -> mapping[x], colors)
-    p2 = scatter!(SAFD_output[:, 4], SAFD_output[:, 8],
+    scatter!(SAFD_output[:, 4], SAFD_output[:, 8],
         #series_annotations = text.(1:length(SAFD_output[:,4]),size = 1),
         markershape=:xcross,
         color=colors_final,
@@ -318,12 +318,11 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         #title="$(filenames[1]), $max_numb_iter iterations, S/N = $S2N, r = $r_thresh, accepted_res = 1.5, Componetization -> ($(length(SAFD_output[:,1])) features)",
         left_margin=5Plots.mm, right_margin=7.5Plots.mm,
         bottom_margin=8.5Plots.mm,
+        xticks = (round.(split; digits = 1)),
     )
     window_split_Rt(Rt,wind_size)
     for i = 1:length(split)
-        @show i
-        p2 = plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)))), color=:red, label=false)
-        display(p2)
+        plot!(ones(Int32(ceil(maximum(unique_mz_values)))) .* (split[i]), collect(1:1:Int32(ceil(maximum(unique_mz_values)/100))*100), color=:red, label=false,xticks = (round.(split; digits = 1)))
     end
     gradient = gradient_curve(gradient, Rt)
     p2 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(split; digits = 1)))
