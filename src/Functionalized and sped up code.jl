@@ -308,7 +308,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     colors_final = paint[colors]
     mapping = Dict(1 => "Unresolved in RT and MS", 2 => "Resolved in Rt only", 3 => "Resolved in both", 4 => "Resolved in MS only")
     labels_final = map(x -> mapping[x], colors)
-    scatter!(SAFD_output[:, 4], SAFD_output[:, 8],
+    p = scatter!(SAFD_output[:, 4], SAFD_output[:, 8],
         #series_annotations = text.(1:length(SAFD_output[:,4]),size = 1),
         markershape=:xcross,
         color=colors_final,
@@ -320,10 +320,10 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         bottom_margin=8.5Plots.mm,
         xticks = (round.(split; digits = 1)),
     )
-    for i = 1:length(split)
-        p2 = plot!(ones(2) .* (split[i]), [(minimum(unique_mz_values)), (maximum(unique_mz_values))], color=:red, label=false)
-        display(p2)
+    for i in 1:length(Split)
+        vline!(p, [Split[i]], color=:red, label=false, ylims=(minimum(unique_mz_values), maximum(unique_mz_values)))
     end
+    display(p)
     gradient = gradient_curve(gradient, Rt)
     p3 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(split; digits = 1)))
         return p3
