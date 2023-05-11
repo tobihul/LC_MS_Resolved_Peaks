@@ -57,15 +57,19 @@ SAFD_output = LC_MS_Resolutions.CompCreate.comp_ms1(chrom,path2features,mass_win
 
 wind_size = 12 #define the number of windows to split the Rt domain in
 resolution = 1.5 #define the accepted resolution for two features to be considered resolved
+alpha = 1 #define the weight of the unresolved peaks % score in the final score 
+beta = 1 #Define the weight of the surface coverage score in the final score
+#The weights can be lower than 1 to reduce the weights or hogher than 1 to increase the weights
 
 #Align masses and run resolutions algorithm
 unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
-colors, results, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, wind_size, resolution, gradient_data)
+colors, results, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, wind_size, resolution, gradient_data, alpha, beta)
 df   #This DataFrame contains all the results
 #Save the dataframe as CSV
 LC_MS_Resolutions.CSV.write("Path_to_where_you_want_your_results/name_of_your_file.csv" ,results)
 #Plot the heatmap with features and windows
 plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, colors, filenames, pathin)
+
 
 savefig("Path_to_where_you_want_your_figure/name_of_your_figure.png") #save the figure as png, pdf or svg with the extension after .
 

@@ -125,7 +125,7 @@ function gradient_curve(data::DataFrame, Rt::Vector{Float32})
     b_modifiers_final = reduce(vcat, b_modifiers)
     return b_modifiers_final
 end
-function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::Float64, gradient::DataFrame)
+function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::Float64, gradient::DataFrame, alpha::Float64,beta::Float64)
 
     #Assign peaks to each of the windows
     Peaks_per_window, time_diff = Peaks_p_window(wind_size, Rt, SAFD_output)
@@ -202,7 +202,7 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
             tot_unresolved_final[i,5] = (tot_unresolved_final[i,4]/length(Peaks_per_window[i]))*100
             tot_unresolved_final[i,6] = (tot_unresolved_final[i,4]/length(SAFD_output[:,4]))*100
             #This sets the final score for a window
-            tot_unresolved_final[i,8] = ((1-(tot_unresolved_final[i,6]/100)) + 0.5 * tot_unresolved_final[i,7])
+            tot_unresolved_final[i,8] = (alpha*(1-(tot_unresolved_final[i,6]/100)) + beta * tot_unresolved_final[i,7])
         else
             tot_unresolved_final[i,8] = 1
         end
@@ -301,7 +301,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         colorbar = false,
         yticks = (0:100:ceil(maximum(unique_mz_values/100))*100),
         title=title_str,
-        xticks = (round.(split; digits = 1))
+        xticks = (round.(split; digits = 1), dpi = 300)
     )
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
     paint = [:Red, :hotpink1, :Green, :Orange]
@@ -318,14 +318,14 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         #title="$(filenames[1]), $max_numb_iter iterations, S/N = $S2N, r = $r_thresh, accepted_res = 1.5, Componetization -> ($(length(SAFD_output[:,1])) features)",
         left_margin=5Plots.mm, right_margin=17.5Plots.mm,
         bottom_margin=8.5Plots.mm,
-        xticks = (round.(split; digits = 1)),
+        xticks = (round.(split; digits = 1)), dpi = 300
     )
     for i in 1:length(split)
-        vline!(p, [split[i]], color=:red, label=false, ylims=(minimum(unique_mz_values), maximum(unique_mz_values)))
+        vline!(p, [split[i]], color=:red, label=false, ylims=(minimum(unique_mz_values), maximum(unique_mz_values)), dpi = 300)
     end
     display(p)
     gradient = gradient_curve(gradient, Rt)
-    p3 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(split; digits = 1)))
+    p3 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(split; digits = 1)), dpi = 300)
         return p3
 end
 function surface_voronoi(x::Vector{Float64},y::Vector{Float64}, k)
@@ -383,4 +383,66 @@ function normalize_lc_ms(SAFD_output::DataFrame)
         MS_norm[i] = (MS_vals[i]-minimum(MS_vals))/(maximum(MS_vals) - minimum(MS_vals))
     end
     return Rt_norm, MS_norm
+end
+function Resolved_peaks_algorithm(pathin, filenames,gradient_data)
+    mz_thresh = [0, 0] #Sets threshold for mz values
+    int_thresh = 500 #Remove most of the noise
+
+    #Import MS data
+    GC.gc()
+
+    mz_val, mz_int, t0, t_end, m, path, msModel, msIonisation, msManufacturer,
+    polarity, Rt = import_files_MS1(pathin, filenames, mz_thresh, int_thresh)
+    FileName = m[1]
+    #Adjust the settings for SAFD here
+    max_numb_iter = 2000 #Roughly the number of features that will be found, if there are less than n_iter it will stop automatically
+    max_t_peak_w=300 # or 20
+    res=20000
+    min_ms_w=0.02
+    r_thresh=0.9 #How well the fitted gaussian overlaps the original peak
+    min_int=10000
+    sig_inc_thresh=5
+    S2N=3 #minimum signal to noise ratio for SAFD to take data as a feature
+    min_peak_w_s=3
+    GC.gc()
+    #Run SAFD (this may take some time depending on n iterations and min_int)
+    rep_table, SAFD_output = safd_s3D(mz_val, mz_int, Rt, FileName, path, max_numb_iter,
+    max_t_peak_w, res, min_ms_w, r_thresh, min_int, sig_inc_thresh, S2N, min_peak_w_s)
+
+    #Componentization of features
+    #Add the file location of the features reported by SAFD to run CompCreate
+    #The report file should be located wherever your MZXML file is
+    #The following code fetches the name of the file automatically given that it is stored in the same place as your dataframe
+    #If you stored the report in a different location, create a variable called path2features leading to your report csv using CSV.read("yourpath.csv",DataFrame)
+    basename_pathin = basename(pathin)
+    filename_no_ext = splitext(filenames[1])[1]
+    path2features = joinpath(pathin*"/"*filename_no_ext*"_report.csv")
+    mass_win_per=0.8
+    ret_win_per=0.5
+    r_thresh=0.9
+    delta_mass=0.004
+    min_int = 750
+
+    chrom=import_files(pathin,filenames,mz_thresh,int_thresh)
+
+
+    ## For only MS1
+    SAFD_output = comp_ms1(chrom,path2features,mass_win_per,ret_win_per,r_thresh,delta_mass, min_int)
+
+    wind_size = 12 #define the number of windows to split the Rt domain in
+    resolution = 1.5 #define the accepted resolution for two features to be considered resolved
+    alpha = 1 #define the weight of the unresolved peaks % score in the final score 
+    beta = 1 #Define the weight of the surface coverage score in the final score
+    #The weights can be lower than 1 to reduce the weights or hogher than 1 to increase the weights
+
+    #Align masses and run resolutions algorithm
+    unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
+    colors, results, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, wind_size, resolution, gradient_data, alpha, beta)  #This DataFrame contains all the results
+    #Save the dataframe as CSV
+    path_for_results = joinpath(pathin*"/"*filename_no_ext*"_results.csv")
+    CSV.write(path_for_results ,results)
+    #Plot the heatmap with features and windows
+    plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, colors, filenames, pathin)
+    path_for_image = joinpath(pathin*"/"*filename_no_ext*"_heatmap.png")
+    savefig(path_for_image)
 end
