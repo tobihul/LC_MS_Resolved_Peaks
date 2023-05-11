@@ -125,7 +125,7 @@ function gradient_curve(data::DataFrame, Rt::Vector{Float32})
     b_modifiers_final = reduce(vcat, b_modifiers)
     return b_modifiers_final
 end
-function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::Float64, gradient::DataFrame, alpha::Float64,beta::Float64)
+function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::T, gradient::DataFrame, alpha::T,beta::T) where T <: Number
 
     #Assign peaks to each of the windows
     Peaks_per_window, time_diff = Peaks_p_window(wind_size, Rt, SAFD_output)
@@ -384,7 +384,7 @@ function normalize_lc_ms(SAFD_output::DataFrame)
     end
     return Rt_norm, MS_norm
 end
-function Resolved_peaks_algorithm(pathin, filenames,gradient_data)
+function Resolved_peaks_algorithm(pathin, filenames,gradient_data, wind_size, accepted_res)
     mz_thresh = [0, 0] #Sets threshold for mz values
     int_thresh = 500 #Remove most of the noise
 
@@ -429,20 +429,23 @@ function Resolved_peaks_algorithm(pathin, filenames,gradient_data)
     ## For only MS1
     SAFD_output = comp_ms1(chrom,path2features,mass_win_per,ret_win_per,r_thresh,delta_mass, min_int)
 
-    wind_size = 12 #define the number of windows to split the Rt domain in
-    resolution = 1.5 #define the accepted resolution for two features to be considered resolved
-    alpha = 1 #define the weight of the unresolved peaks % score in the final score 
-    beta = 1 #Define the weight of the surface coverage score in the final score
+    #define the number of windows to split the Rt domain in
+     #define the accepted resolution for two features to be considered resolved
+    alpha = 1.0 #define the weight of the unresolved peaks % score in the final score 
+    beta = 1.0 #Define the weight of the surface coverage score in the final score
     #The weights can be lower than 1 to reduce the weights or hogher than 1 to increase the weights
 
     #Align masses and run resolutions algorithm
     unique_mz_values, plot_matrix = mass_align(Rt, mz_val, mz_int)
-    colors, results, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, wind_size, resolution, gradient_data, alpha, beta)  #This DataFrame contains all the results
+    colors, results, gradient = unresolved_per_window_Rt_and_MS(Rt, SAFD_output, wind_size, accepted_res, gradient_data, alpha, beta)
+    
     #Save the dataframe as CSV
     path_for_results = joinpath(pathin*"/"*filename_no_ext*"_results.csv")
     CSV.write(path_for_results ,results)
+    println("Your resolved peaks results hav been saved to $path_for_results")
     #Plot the heatmap with features and windows
-    plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, colors, filenames, pathin)
+    plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, wind_size, gradient_data, colors, filenames, pathin)
     path_for_image = joinpath(pathin*"/"*filename_no_ext*"_heatmap.png")
     savefig(path_for_image)
+    println("Your image has been saved to $path_for_image")
 end
