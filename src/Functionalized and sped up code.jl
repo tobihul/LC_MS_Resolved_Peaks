@@ -301,8 +301,8 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         colorbar = false,
         yticks = (0:100:ceil(maximum(unique_mz_values/100))*100),
         title=title_str,
-        xticks = (round.(Split; digits = 1), dpi = 300)
-    )
+        xticks = (round.(Split; digits = 1)), dpi = 300)
+    
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
     paint = [:Red, :hotpink1, :Green, :Orange]
     colors_final = paint[colors]
@@ -318,7 +318,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         #title="$(filenames[1]), $max_numb_iter iterations, S/N = $S2N, r = $r_thresh, accepted_res = 1.5, Componetization -> ($(length(SAFD_output[:,1])) features)",
         left_margin=5Plots.mm, right_margin=17.5Plots.mm,
         bottom_margin=8.5Plots.mm,
-        xticks = (round.(Split; digits = 1)), dpi = 300
+        xticks = round.(Split; digits = 1), dpi = 300
     )
     for i in 1:length(Split)
         vline!(p, [Split[i]], color=:red, label=false, ylims=(minimum(unique_mz_values), maximum(unique_mz_values)), dpi = 300)
