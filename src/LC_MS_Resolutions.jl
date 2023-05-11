@@ -1,4 +1,4 @@
-__precompile__()
+
 module LC_MS_Resolutions
 
 #Packages
