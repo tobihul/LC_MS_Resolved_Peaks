@@ -288,7 +288,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     title_str = replace(title_str, "_" => " ") # optional: replace underscores with spaces
     title_str = replace(title_str, "." => "") # optional: remove dots
     title_str = uppercase(title_str) # optional: convert to uppercase
-    split = window_split_Rt(Rt, wind_size)
+    Split = window_S_Rt(Rt, wind_size)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
         color=:plasma,
@@ -301,7 +301,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         colorbar = false,
         yticks = (0:100:ceil(maximum(unique_mz_values/100))*100),
         title=title_str,
-        xticks = (round.(split; digits = 1), dpi = 300)
+        xticks = (round.(Split; digits = 1), dpi = 300)
     )
     # Create a scatter plot using the x and y coordinates and the colors and symbols vectors
     paint = [:Red, :hotpink1, :Green, :Orange]
@@ -318,14 +318,14 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
         #title="$(filenames[1]), $max_numb_iter iterations, S/N = $S2N, r = $r_thresh, accepted_res = 1.5, Componetization -> ($(length(SAFD_output[:,1])) features)",
         left_margin=5Plots.mm, right_margin=17.5Plots.mm,
         bottom_margin=8.5Plots.mm,
-        xticks = (round.(split; digits = 1)), dpi = 300
+        xticks = (round.(Split; digits = 1)), dpi = 300
     )
-    for i in 1:length(split)
-        vline!(p, [split[i]], color=:red, label=false, ylims=(minimum(unique_mz_values), maximum(unique_mz_values)), dpi = 300)
+    for i in 1:length(Split)
+        vline!(p, [Split[i]], color=:red, label=false, ylims=(minimum(unique_mz_values), maximum(unique_mz_values)), dpi = 300)
     end
     display(p)
     gradient = gradient_curve(gradient, Rt)
-    p3 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(split; digits = 1)), dpi = 300)
+    p3 = plot!(twinx(), Rt, gradient, yticks = (5:5:100), legend = false, ylabel = ("%B"), linewidth = 5, linestyle = :dot, xticks = (round.(Split; digits = 1)), dpi = 300)
         return p3
 end
 function surface_voronoi(x::Vector{Float64},y::Vector{Float64}, k)

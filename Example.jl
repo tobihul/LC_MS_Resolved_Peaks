@@ -68,7 +68,7 @@ df   #This DataFrame contains all the results
 #Save the dataframe as CSV
 LC_MS_Resolutions.CSV.write("Path_to_where_you_want_your_results/name_of_your_file.csv" ,results)
 #Plot the heatmap with features and windows
-plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, 12, gradient_data, colors, filenames, pathin)
+plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, wind_size, gradient_data, colors, filenames, pathin)
 
 
 savefig("Path_to_where_you_want_your_figure/name_of_your_figure.png") #save the figure as png, pdf or svg with the extension after .
