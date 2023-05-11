@@ -288,7 +288,7 @@ function plot_heatmap(SAFD_output::DataFrame, Rt::Vector{Float32}, unique_mz_val
     title_str = replace(title_str, "_" => " ") # optional: replace underscores with spaces
     title_str = replace(title_str, "." => "") # optional: remove dots
     title_str = uppercase(title_str) # optional: convert to uppercase
-    Split = window_S_Rt(Rt, wind_size)
+    Split = window_split_Rt(Rt, wind_size)
     heatmap(Rt, unique_mz_values, plot_matrix',
         #c = cgrad([:white,:navy,:indigo,:teal,:green,:yellow,:red],[0,0.04,1]),
         color=:plasma,
