@@ -125,7 +125,7 @@ function gradient_curve(data::DataFrame, Rt::Vector{Float32})
     b_modifiers_final = reduce(vcat, b_modifiers)
     return b_modifiers_final
 end
-function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::T, gradient::DataFrame, alpha::T,beta::T) where T <: Number
+function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataFrame, wind_size::Int64, accepted_res::T, gradient::DataFrame, alpha::X,beta::K) where T <: Number where K <: Number where X <: Number
 
     #Assign peaks to each of the windows
     Peaks_per_window, time_diff = Peaks_p_window(wind_size, Rt, SAFD_output)
