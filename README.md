@@ -38,15 +38,11 @@ pathin = "path_to_the_location_of_your_data"
 filenames = ["your filename.mzXML"]
 #Load the file for your gradient here
 gradient_data = path_to_the_location_of_your_gradient/name_of_your_gradient_file.csv", LC_MS_Resolutions.DataFrame)
-
-window_size = 12   #The number of windows the RT domain is split into (Default = 12)
-accepted_resolution = 1.5  #The resolution accepted for two gaussian peaks to be considered separated (Baseline separation =1.5)
+window_size = 12   
+accepted_resolution = 1.5  
 Resolved_peaks_algorithm(pathin, filenames,gradient_data,window_size, accepted_resolution)
 ```
-
-
-
-
+## Customized usage
 
 ### Data import, feature detection and componentization
 ```julia
