@@ -28,7 +28,7 @@ Time | %B
 10| 5
 
 ## Quick use file (Single run)
-If you do not want to adjust any of the SAFD, CompCreate or MS_Import parameters, you may use the **SingleRunResolutions.jl** file. The only two things needed are the path to your mzXML file, the name of the file and the full path to the CSV of your gradient. The window size and accepted resolution can still be edited.
+If you do not want to adjust any of the SAFD, CompCreate or MS_Import parameters, you may use the **Single run LC_MS_Resolved_Peaks.jl** file. The only two things needed are the path to your mzXML file, the name of the file and the full path to the CSV of your gradient. The window size and accepted resolution can still be edited.
 
 ```julia
 using LC_MS_Resolutions
