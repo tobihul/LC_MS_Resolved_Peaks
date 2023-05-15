@@ -442,7 +442,7 @@ function Resolved_peaks_algorithm(pathin, filenames,gradient_data, wind_size, ac
     #Save the dataframe as CSV
     path_for_results = joinpath(pathin*"/"*filename_no_ext*"_results.csv")
     CSV.write(path_for_results ,results)
-    println("Your resolved peaks results hav been saved to $path_for_results")
+    println("Your resolved peaks results have been saved to $path_for_results")
     #Plot the heatmap with features and windows
     plot_heatmap(SAFD_output, Rt, unique_mz_values, plot_matrix, wind_size, gradient_data, colors, filenames, pathin)
     path_for_image = joinpath(pathin*"/"*filename_no_ext*"_heatmap.png")

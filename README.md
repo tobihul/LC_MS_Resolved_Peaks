@@ -37,7 +37,7 @@ using LC_MS_Resolutions
 pathin = "path_to_the_location_of_your_data" 
 filenames = ["your filename.mzXML"]
 #Load the file for your gradient here
-gradient_data = path_to_the_location_of_your_gradient/name_of_your_gradient_file.csv", LC_MS_Resolutions.DataFrame)
+gradient_data = "path_to_the_location_of_your_gradient/name_of_your_gradient_file.csv", LC_MS_Resolutions.DataFrame)
 window_size = 12   
 accepted_resolution = 1.5  
 Resolved_peaks_algorithm(pathin, filenames,gradient_data,window_size, accepted_resolution)
