@@ -27,6 +27,27 @@ Time | %B
 11.1| 95
 10| 5
 
+## Quick use file (Single run)
+If you do not want to adjust any of the SAFD, CompCreate or MS_Import parameters, you may use the **SingleRunResolutions.jl** file. The only two things needed are the path to your mzXML file, the name of the file and the full path to the CSV of your gradient. The window size and accepted resolution can still be edited.
+
+```julia
+using LC_MS_Resolutions
+#New MZXML file:
+#Set filename
+pathin = "path_to_the_location_of_your_data" 
+filenames = ["your filename.mzXML"]
+#Load the file for your gradient here
+gradient_data = path_to_the_location_of_your_gradient/name_of_your_gradient_file.csv", LC_MS_Resolutions.DataFrame)
+
+window_size = 12   #The number of windows the RT domain is split into (Default = 12)
+accepted_resolution = 1.5  #The resolution accepted for two gaussian peaks to be considered separated (Baseline separation =1.5)
+Resolved_peaks_algorithm(pathin, filenames,gradient_data,window_size, accepted_resolution)
+```
+
+
+
+
+
 ### Data import, feature detection and componentization
 ```julia
 using LC_MS_Resolutions
