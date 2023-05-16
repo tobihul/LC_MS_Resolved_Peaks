@@ -160,7 +160,7 @@ function unresolved_per_window_Rt_and_MS(Rt::Vector{Float32}, SAFD_output::DataF
             Mass_weights = (top_95 .-minimum(top_95))./maximum(top_95).-minimum(top_95)
             #Calculating the orthogonality of the window with weights
             Rt_norm, MS_norm = normalize_lc_ms(SAFD_output[Peaks_per_window[i],:])
-            tot_unresolved_final[i,7] = surface_voronoi(Rt_norm, MS_norm, 2.2) * Mass_weights[i]
+            #tot_unresolved_final[i,7] = surface_voronoi(Rt_norm, MS_norm, 2.2) * Mass_weights[i]
             #############
             res_Rt, res_M = resolutions(SAFD_output[Peaks_per_window[i][1]:Peaks_per_window[i][end], :])
             #Initialize the bitmatrixes
